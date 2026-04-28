@@ -72,7 +72,7 @@ describe("renderStatusEmbed", () => {
                     simcSnapshot: "raw",
                     status: s,
                     error: s === "failed" ? "boom".repeat(40) : null,
-                    raidbotsUrl: s === "done" ? "https://x/r/abc" : null,
+                    reportUrl: s === "done" ? "https://x/r/abc" : null,
                     completedAt: s === "done" ? new Date(Date.now() - 5_000) : null,
                 })
                 .run();
@@ -102,7 +102,7 @@ describe("renderStatusEmbed", () => {
                 characterId: c.id,
                 simcSnapshot: "raw",
                 status: "done",
-                raidbotsUrl: "https://x/r/abc",
+                reportUrl: "https://x/r/abc",
                 completedAt: new Date(Date.now() - 60_000),
             })
             .run();
@@ -171,7 +171,7 @@ describe("renderStatusEmbed", () => {
                 characterId: c.id,
                 simcSnapshot: "raw",
                 status: "done",
-                raidbotsUrl: "https://x/r/abc",
+                reportUrl: "https://x/r/abc",
             })
             .run();
         const desc = renderStatusEmbed(db, 7).toJSON().description!;

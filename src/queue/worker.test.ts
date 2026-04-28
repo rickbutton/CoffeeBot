@@ -28,8 +28,7 @@ describe("startWorker", () => {
 
         const executor: Executor = async () => ({
             ok: true,
-            raidbotsUrl: "https://x/r/abc",
-            raidbotsReportId: "abc",
+            reportUrl: "https://x/r/abc",
         });
 
         let changes = 0;
@@ -43,7 +42,7 @@ describe("startWorker", () => {
             // Sanity: characterId still matches
             const row = db.select().from(simJobs).where(eq(simJobs.id, jobIds[0]!)).get();
             expect(row?.characterId).toBe(c.id);
-            expect(row?.raidbotsUrl).toBe("https://x/r/abc");
+            expect(row?.reportUrl).toBe("https://x/r/abc");
         } finally {
             await w.stop();
         }
@@ -61,8 +60,7 @@ describe("startWorker", () => {
 
         const executor: Executor = async () => ({
             ok: true,
-            raidbotsUrl: "https://x/r/abc",
-            raidbotsReportId: "abc",
+            reportUrl: "https://x/r/abc",
         });
         const w = startWorker(db, FAST_CFG, executor);
         try {
@@ -136,7 +134,7 @@ describe("startWorker", () => {
         let executed = 0;
         const executor: Executor = async () => {
             executed++;
-            return { ok: true, raidbotsUrl: "u", raidbotsReportId: "r" };
+            return { ok: true, reportUrl: "u" };
         };
         const w = startWorker(db, { ...FAST_CFG, dailyCap: 1 }, executor);
         try {
@@ -156,7 +154,6 @@ describe("stubExecutor", () => {
         const r = await stubExecutor(job);
         expect(r.ok).toBe(true);
         if (!r.ok) return;
-        expect(r.raidbotsUrl).toContain("STUB-7");
-        expect(r.raidbotsReportId).toBe("STUB-7");
+        expect(r.reportUrl).toContain("STUB-7");
     });
 }, 10_000);

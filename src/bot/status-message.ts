@@ -102,10 +102,10 @@ function formatSimStatus(c: Character, job: SimJob | undefined): string {
         case "failed":
             return ` · sim: ❌ failed${job.error ? ` (${truncate(job.error, 60)})` : ""}`;
         case "done": {
-            if (!job.raidbotsUrl) return " · sim: done";
+            if (!job.reportUrl) return " · sim: done";
             const outdated =
                 c.simc !== null && c.updatedAt.getTime() > (job.completedAt?.getTime() ?? 0);
-            const link = `[report](${job.raidbotsUrl})`;
+            const link = `[report](${job.reportUrl})`;
             return outdated ? ` · sim: ${link} ⚠ simc updated since` : ` · sim: ${link}`;
         }
     }

@@ -15,6 +15,6 @@ export function makeRaidbotsExecutor(
         if (!result.ok) return { ok: false, error: result.error };
         if ("submitted" in result)
             return { ok: false, error: "automation returned without submitting" };
-        return { ok: true, raidbotsUrl: result.reportUrl, raidbotsReportId: result.reportId };
+        return { ok: true, reportUrl: result.reportUrl };
     };
 }

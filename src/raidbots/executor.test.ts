@@ -15,8 +15,7 @@ describe("makeRaidbotsExecutor", () => {
             const r = await exec({ id: 1, simcSnapshot: "raw" } as never);
             expect(r).toEqual({
                 ok: true,
-                raidbotsUrl: "https://x/r/abc",
-                raidbotsReportId: "abc",
+                reportUrl: "https://x/r/abc",
             });
         } finally {
             spy.mockRestore();

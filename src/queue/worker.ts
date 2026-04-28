@@ -13,7 +13,7 @@ import {
 } from "./repo.js";
 
 export type ExecResult =
-    | { ok: true; raidbotsUrl: string; raidbotsReportId: string | null }
+    | { ok: true; reportUrl: string }
     | { ok: false; error: string };
 
 export type Executor = (job: SimJob) => Promise<ExecResult>;
@@ -103,8 +103,8 @@ export function startWorker(
                 }
 
                 if (result.ok) {
-                    markDone(db, job.id, result.raidbotsUrl, result.raidbotsReportId);
-                    log.info({ jobId: job.id, url: result.raidbotsUrl }, "job done");
+                    markDone(db, job.id, result.reportUrl);
+                    log.info({ jobId: job.id, url: result.reportUrl }, "job done");
                     consecutiveFailures = 0;
                 } else {
                     markFailed(db, job.id, result.error);
@@ -160,7 +160,6 @@ export const stubExecutor: Executor = async (job) => {
     await sleep(2_000);
     return {
         ok: true,
-        raidbotsUrl: `https://www.raidbots.com/simbot/report/STUB-${job.id}`,
-        raidbotsReportId: `STUB-${job.id}`,
+        reportUrl: `https://www.raidbots.com/simbot/report/STUB-${job.id}`,
     };
 };

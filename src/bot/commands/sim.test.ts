@@ -106,7 +106,7 @@ describe("handleSimCommand subcommands", () => {
                 characterId: c.id,
                 simcSnapshot: "raw",
                 status: "done",
-                raidbotsUrl: "https://x/r/abc",
+                reportUrl: "https://x/r/abc",
             })
             .run();
         db.insert(simJobs)

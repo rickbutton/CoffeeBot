@@ -63,8 +63,9 @@ export const simJobs = sqliteTable(
             .references(() => characters.id, { onDelete: "cascade" }),
         status: text("status", { enum: JOB_STATUSES }).notNull().default("queued"),
         simcSnapshot: text("simc_snapshot").notNull(),
-        raidbotsReportId: text("raidbots_report_id"),
-        raidbotsUrl: text("raidbots_url"),
+        // Source-agnostic report URL. The URL pattern itself encodes the tool
+        // (raidbots.com/simbot/report/... today; later, e.g. questionablyepic.com).
+        reportUrl: text("report_url"),
         error: text("error"),
         createdAt: integer("created_at", { mode: "timestamp" })
             .notNull()

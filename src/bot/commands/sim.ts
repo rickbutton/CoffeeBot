@@ -104,7 +104,7 @@ export async function handleSimCommand(
             ...(status.recent.length === 0
                 ? ["_(none)_"]
                 : status.recent.map((j) => {
-                      const url = j.raidbotsUrl ? ` <${j.raidbotsUrl}>` : "";
+                      const url = j.reportUrl ? ` <${j.reportUrl}>` : "";
                       const err = j.error ? ` — ${j.error.slice(0, 80)}` : "";
                       return `\`#${j.id}\` char ${j.characterId} · **${j.status}**${url}${err}`;
                   })),

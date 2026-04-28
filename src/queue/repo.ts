@@ -83,17 +83,11 @@ export function claimNextJob(db: Db): SimJob | null {
     });
 }
 
-export function markDone(
-    db: Db,
-    jobId: number,
-    raidbotsUrl: string,
-    raidbotsReportId: string | null,
-): void {
+export function markDone(db: Db, jobId: number, reportUrl: string): void {
     db.update(simJobs)
         .set({
             status: "done",
-            raidbotsUrl,
-            raidbotsReportId,
+            reportUrl,
             completedAt: new Date(),
             error: null,
         })

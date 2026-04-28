@@ -84,10 +84,10 @@ describe("claimNextJob / markDone / markFailed", () => {
         expect(first?.id).toBe(jobIds[0]);
         expect(first?.status).toBe("running");
 
-        markDone(db, first!.id, "https://example.com/r/abc", "abc");
+        markDone(db, first!.id, "https://example.com/r/abc");
         const row = db.select().from(simJobs).where(eq(simJobs.id, first!.id)).get();
         expect(row?.status).toBe("done");
-        expect(row?.raidbotsUrl).toBe("https://example.com/r/abc");
+        expect(row?.reportUrl).toBe("https://example.com/r/abc");
 
         const second = claimNextJob(db);
         expect(second?.id).not.toBe(first!.id);
@@ -128,7 +128,7 @@ describe("queueStatus / jobsCountedTowardCap", () => {
         upsertCharacter(db, "u1", sample(), "raw");
         const { jobIds } = enqueueForOwner(db, "u1");
         const j = claimNextJob(db);
-        markDone(db, j!.id, "u", "rid");
+        markDone(db, j!.id, "u");
 
         // Add a queued one
         upsertCharacter(db, "u2", sample({ name: "Z" }), "raw");
