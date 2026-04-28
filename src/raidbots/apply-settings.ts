@@ -4,10 +4,14 @@ import { difficultyLabel, fightStyleLabel, type SimSettings } from "./settings.j
 
 export async function applySettings(page: Page, s: SimSettings): Promise<void> {
     await selectSource(page, s.source);
-    // Difficulty must precede upgrade-items-up-to — that dropdown's options are difficulty-scoped.
+    // Difficulty must precede ensureSimulationOptionsOpen / selectMaxUpgradeIlvl: picking a
+    // difficulty is what mounts the "Upgrade up to:" react-select inside ITEMS TO SIM. The
+    // difficulty tabs themselves live in the always-visible RAID DIFFICULTY section, not in
+    // the Simulation Options panel.
     await selectDifficulty(page, s.difficulty);
-    // Simulation Options panel must be open before fight-style and upgrade-ilvl: those react-selects
-    // only mount when the panel is expanded (Raidbots persists open/closed in localStorage per profile).
+    // Simulation Options panel must be open before fight-style: that <select> only mounts when
+    // the panel is expanded (Raidbots persists open/closed in localStorage per profile, so a
+    // fresh profile defaults to collapsed).
     await ensureSimulationOptionsOpen(page);
     await selectFightStyle(page, s.fightStyle);
     await selectMaxUpgradeIlvl(page);
@@ -77,9 +81,12 @@ async function selectFightStyle(page: Page, style: SimSettings["fightStyle"]): P
 async function selectMaxUpgradeIlvl(page: Page): Promise<void> {
     // The react-select index is auto-numbered and shifts with which other selects are mounted
     // (regions, realms, etc.), so we anchor on the "Upgrade up to:" label text and walk forward
-    // to the first react-select input. Options match the "X 6/6" text rather than a numbered id.
+    // to the first react-select control wrapper. We target the control wrapper (div with class
+    // containing "-control") rather than the inner <input>, because the input has opacity:0 and
+    // pointer events on its bounding box are intercepted by the overlaid singleValue text and
+    // the page's fixed Raidbots logo. Options match the "X 6/6" text rather than a numbered id.
     const trigger = page.locator(
-        "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::input[starts-with(@id,'react-select-')])[1]",
+        "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::div[contains(@class,'-control') and .//input[starts-with(@id,'react-select-')]])[1]",
     );
     try {
         await trigger.waitFor({ state: "visible", timeout: 10_000 });

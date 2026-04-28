@@ -27,7 +27,7 @@ function makeLocator(state: LocatorState = {}) {
 const SIM_OPTIONS_HEADER_XPATH =
     "xpath=//div[contains(@class,'Box') and starts-with(normalize-space(text()),'Simulation Options:')]";
 const UPGRADE_TRIGGER_XPATH =
-    "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::input[starts-with(@id,'react-select-')])[1]";
+    "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::div[contains(@class,'-control') and .//input[starts-with(@id,'react-select-')]])[1]";
 
 function makePage(locators: Record<string, LocatorState> = {}) {
     return {
