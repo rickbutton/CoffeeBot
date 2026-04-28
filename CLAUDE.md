@@ -24,6 +24,12 @@
 - Don't introduce mocks of internal modules when a fake at the I/O boundary works.
 - Keep tests deterministic: use injectable clocks/RNG (see [src/queue/pacing.ts](src/queue/pacing.ts) for the pattern), or set explicit `Date` instances rather than relying on wall-clock time.
 
+## Keep the README in sync
+- Whenever a change adds, removes, or alters anything that's described in [README.md](README.md) — feature status, scripts, env vars, quickstart steps, operating notes — update the README in the **same** change.
+- Default to "yes, this needs a README touch": if the change introduces a new script, a new env var, a new top-level command, alters the `Status` section's "Working today" / "Remaining" lists, or changes how a developer would run, test, or operate the bot, the README must reflect it.
+- Cross-references count: if you add a new top-level doc or rename an existing one, fix every link to it in the README and CLAUDE.md.
+- A PR that ships behavior changes without a corresponding README update should be treated as incomplete — the same way a missing test is.
+
 ## Things hard to test (and what to do instead)
 - **Playwright Page interactions** — write a tiny `makePage(...)` mock in the same test file, like [src/raidbots/automation.test.ts](src/raidbots/automation.test.ts) and [src/raidbots/apply-settings.test.ts](src/raidbots/apply-settings.test.ts).
 - **discord.js Client events** — a Node `EventEmitter` is a sufficient stand-in for `Client`; emit `messageCreate` / `interactionCreate` directly. See [src/bot/handlers/dm.test.ts](src/bot/handlers/dm.test.ts).

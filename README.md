@@ -23,7 +23,7 @@ The bot owns one message in that channel and keeps it in lock-step with the data
 
 - **wowaudit upload** (Phase 4) — POST each completed report URL to wowaudit's wishlist endpoint and stamp `wowauditUploadedAt`. Schema column already exists; needs the actual API call wired in. Requires `WOWAUDIT_API_KEY` / `WOWAUDIT_TEAM_ID` and confirmation of the endpoint shape from wowaudit's team-admin docs.
 - **More failure-mode coverage** — currently auto-pauses after 3 consecutive failures. Could differentiate transient (single retry) vs permanent (pause), and detect specific raidbots blocking pages (queue full / captcha) earlier in the flow.
-- **Test coverage** — only the simc parser and pacing module are unit-tested today (~7% line coverage). The Playwright flow is exercised manually via `pnpm sim:test-once`; the rest is end-to-end-tested by running the bot.
+- **Live Playwright validation** — the playwright executor is unit-tested with mocked Page objects, but the live raidbots flow is still only exercised manually via `pnpm sim:test-once`. A scheduled smoke run against a fixed test character would catch DOM breakage earlier.
 
 ## Quickstart
 
@@ -43,8 +43,8 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | | |
 |---|---|
 | `pnpm dev` / `pnpm start` | Run the bot (watch / built) |
-| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` |
-| `pnpm typecheck` / `pnpm lint` / `pnpm format` | TS check, ESLint, Prettier |
+| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (170 tests, ~98% line coverage) |
+| `pnpm typecheck` / `pnpm lint` / `pnpm format` | TS check (covers source **and** tests via [tsconfig.test.json](tsconfig.test.json)), ESLint, Prettier |
 | `pnpm db:generate` / `pnpm db:migrate` | Drizzle migrations |
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |
 
@@ -58,3 +58,7 @@ PLAYWRIGHT_HEADLESS=false SUBMIT=false pnpm sim:test-once ./simc.example
 Raidbots has no public sim API and the maintainer is openly hostile to scraping that affects service quality. The pacing defaults (`SIM_MIN_DELAY_SECONDS=75`, `SIM_DAILY_CAP=30`) are deliberately conservative — don't lower them just to run faster.
 
 When raidbots changes its DOM and a selector breaks, the failing log line tells you which step. Selectors live as plain Playwright locators in [src/raidbots/apply-settings.ts](src/raidbots/apply-settings.ts), [automation.ts](src/raidbots/automation.ts), and [login.ts](src/raidbots/login.ts) — the easiest update path is a Claude Code session with the Playwright MCP server enabled.
+
+## Working with this repo
+
+See [CLAUDE.md](CLAUDE.md) for agent (and human) guidelines: tests are required for every change, project-wide line coverage stays ≥ 90%, and patterns for mocking Playwright / discord.js live alongside the existing tests.
