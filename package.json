@@ -18,6 +18,7 @@
         "test:coverage:open": "vitest run --coverage && start coverage/index.html",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "tsx src/db/migrate.ts",
+        "db:pull-prod": "fly ssh console -C \"sqlite3 /data/bot.db '.backup /data/snapshot.db'\" && node -e \"['./data/bot.db','./data/bot.db-wal','./data/bot.db-shm'].forEach(f=>{try{require('fs').rmSync(f)}catch{}})\" && fly ssh sftp get /data/snapshot.db ./data/bot.db && fly ssh console -C \"rm /data/snapshot.db\"",
         "sim:test-once": "tsx src/raidbots/test-sim.ts",
         "qelive:test-once": "tsx src/qelive/test-sim.ts",
         "wowutils:script": "tsx src/wowutils/generate-script.ts",

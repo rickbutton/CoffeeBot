@@ -49,6 +49,7 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (268 tests, ~98% line coverage) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm format` | TS check (covers source **and** tests via [tsconfig.test.json](tsconfig.test.json)), ESLint, Prettier |
 | `pnpm db:generate` / `pnpm db:migrate` | Drizzle migrations |
+| `pnpm db:pull-prod` | Snapshot the Fly prod DB and overwrite local `data/bot.db` (also clears stale `bot.db-wal` / `bot.db-shm`). Stop your local bot first |
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |
 | `pnpm qelive:test-once <simc-file>` | Run one QELive Upgrade Finder pass for a healer simc |
 | `pnpm wowutils:script` | Generate the wowutils paste-into-console upload snippet at `data/wowutils-script.js` (interactive when any character has >1 spec simmed) |
