@@ -1,13 +1,18 @@
 import { ChannelType, type Client, type Message } from "discord.js";
 import type { Db } from "../../db/client.js";
 import { log } from "../../util/log.js";
-import { processSimcMessage } from "./simc-paste.js";
+import { enqueueSuffix, processSimcMessage } from "./simc-paste.js";
 
 const HELP =
     "Hi! Paste a full SimulationCraft string (from the in-game `/simc` addon) and I'll store it. " +
     "Long pastes will arrive as a `.txt` attachment — that's fine, I'll read it.";
 
-export function registerDmHandler(client: Client, db: Db, triggerStatusUpdate: () => void): void {
+export function registerDmHandler(
+    client: Client,
+    db: Db,
+    triggerStatusUpdate: () => void,
+    pokeWorker: () => void,
+): void {
     client.on("messageCreate", async (msg: Message) => {
         if (msg.author.bot || msg.channel.type !== ChannelType.DM) return;
         try {
@@ -44,9 +49,10 @@ export function registerDmHandler(client: Client, db: Db, triggerStatusUpdate: (
                     return;
                 case "stored": {
                     const c = outcome.character;
+                    if (outcome.enqueue.enqueued > 0) pokeWorker();
                     await reply(
                         msg,
-                        `:white_check_mark: ${outcome.created ? "Stored" : "Updated"} **${c.name}** (${c.classDisplay} — ${c.spec}) on **${c.realm}-${c.region.toUpperCase()}**.`,
+                        `:white_check_mark: ${outcome.created ? "Stored" : "Updated"} **${c.name}** (${c.classDisplay} — ${c.spec}) on **${c.realm}-${c.region.toUpperCase()}**.${enqueueSuffix(outcome.enqueue)}`,
                     );
                     triggerStatusUpdate();
                     return;

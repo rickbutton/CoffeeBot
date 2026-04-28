@@ -32,7 +32,7 @@ describe("registerDmHandler", () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerDmHandler(client, db, trigger);
+        registerDmHandler(client, db, trigger, () => {});
 
         const botMsg = makeMsg({ content: VALID_SIMC, bot: true });
         (client as unknown as EventEmitter).emit("messageCreate", botMsg);
@@ -49,30 +49,73 @@ describe("registerDmHandler", () => {
     it("does not reply when message is empty with no attachments", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerDmHandler(client, db, () => {});
+        registerDmHandler(client, db, () => {}, () => {});
         const msg = makeMsg({ content: "" });
         (client as unknown as EventEmitter).emit("messageCreate", msg);
         await flush();
         expect(msg.reply).not.toHaveBeenCalled();
     });
 
-    it("stores a valid simc and triggers status update", async () => {
+    it("stores a valid simc, enqueues a sim, and pokes the worker", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerDmHandler(client, db, trigger);
+        const poke = vi.fn();
+        registerDmHandler(client, db, trigger, poke);
         let reply = "";
         const msg = makeMsg({ content: VALID_SIMC, onReply: (c) => (reply = c) });
         (client as unknown as EventEmitter).emit("messageCreate", msg);
         await flush();
         expect(reply).toMatch(/Stored/);
+        expect(reply).toMatch(/Sim queued/);
         expect(trigger).toHaveBeenCalled();
+        expect(poke).toHaveBeenCalled();
+    });
+
+    it("does not poke the worker when the simc is a duplicate of the last job", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        const poke = vi.fn();
+        registerDmHandler(client, db, () => {}, poke);
+        // First paste — enqueues.
+        (client as unknown as EventEmitter).emit("messageCreate", makeMsg({ content: VALID_SIMC }));
+        await flush();
+        expect(poke).toHaveBeenCalledTimes(1);
+
+        // Second paste of the same simc — should skip enqueue.
+        let reply = "";
+        const msg2 = makeMsg({ content: VALID_SIMC, onReply: (c) => (reply = c) });
+        (client as unknown as EventEmitter).emit("messageCreate", msg2);
+        await flush();
+        expect(poke).toHaveBeenCalledTimes(1);
+        expect(reply).toMatch(/Already simmed/);
+    });
+
+    it("does not poke when the spec is a healer", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        const poke = vi.fn();
+        registerDmHandler(client, db, () => {}, poke);
+        const healerSimc = `# header
+priest="Healz"
+level=80
+race=human
+region=us
+server=area-52
+spec=discipline
+`;
+        let reply = "";
+        const msg = makeMsg({ content: healerSimc, onReply: (c) => (reply = c) });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(reply).toMatch(/Healer spec/);
+        expect(poke).not.toHaveBeenCalled();
     });
 
     it("replies with parse-error for malformed simc", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerDmHandler(client, db, () => {});
+        registerDmHandler(client, db, () => {}, () => {});
         let reply = "";
         const broken =
             `hunter="Bowzo"\nregion=us\nspec=beast_mastery\n` + "x".repeat(40);
@@ -85,7 +128,7 @@ describe("registerDmHandler", () => {
     it("replies with missing-spec when spec line is absent", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerDmHandler(client, db, () => {});
+        registerDmHandler(client, db, () => {}, () => {});
         let reply = "";
         const noSpec = `hunter="Bowzo"\nlevel=80\nregion=us\nserver=area-52\n`;
         const msg = makeMsg({ content: noSpec, onReply: (c) => (reply = c) });
@@ -102,7 +145,7 @@ describe("registerDmHandler", () => {
         });
         try {
             const client = new EventEmitter() as never;
-            registerDmHandler(client, db, () => {});
+            registerDmHandler(client, db, () => {}, () => {});
             let reply = "";
             const msg = makeMsg({ content: VALID_SIMC, onReply: (c) => (reply = c) });
             (client as unknown as EventEmitter).emit("messageCreate", msg);
@@ -116,7 +159,7 @@ describe("registerDmHandler", () => {
     it("logs and swallows when handler throws (e.g. createDM throws)", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerDmHandler(client, db, () => {});
+        registerDmHandler(client, db, () => {}, () => {});
         const msg = {
             content: VALID_SIMC,
             channel: { type: ChannelType.DM },
@@ -140,7 +183,7 @@ describe("registerDmHandler", () => {
     it("replies with not-simc for content that doesn't look like simc", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerDmHandler(client, db, () => {});
+        registerDmHandler(client, db, () => {}, () => {});
         let reply = "";
         const msg = makeMsg({
             content: "# just a header\nrandom prose that's plenty long enough to pass the length check easily here",

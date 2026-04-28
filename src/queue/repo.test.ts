@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { makeTestDb } from "../test-utils/db.js";
 import { upsertCharacter, addCharacterRoster } from "../db/repo.js";
-import { simJobs } from "../db/schema.js";
+import { characters, simJobs } from "../db/schema.js";
 import {
     cancelJob,
     claimNextJob,
     enqueueAll,
+    enqueueForCharacter,
     enqueueForOwner,
     jobsCountedTowardCap,
     markDone,
@@ -64,6 +65,104 @@ describe("enqueueForOwner / enqueueAll", () => {
         const r = enqueueAll(db);
         expect(r.enqueued).toBe(2);
         expect(r.skippedHealer).toBe(0);
+    });
+});
+
+describe("enqueueForCharacter", () => {
+    it("returns empty result when the character doesn't exist", () => {
+        const db = makeTestDb();
+        const r = enqueueForCharacter(db, 9999);
+        expect(r).toEqual({
+            enqueued: 0,
+            skippedNoSimc: 0,
+            skippedHealer: 0,
+            skippedDuplicate: 0,
+            jobIds: [],
+        });
+    });
+
+    it("skips when character has no simc", () => {
+        const db = makeTestDb();
+        addCharacterRoster(db, {
+            discordId: "u1",
+            name: "C",
+            realm: "r",
+            region: "us",
+            className: "mage",
+            specs: ["fire"],
+        });
+        const owner = db.select().from(characters).all()[0]!;
+        const r = enqueueForCharacter(db, owner.id);
+        expect(r.enqueued).toBe(0);
+        expect(r.skippedNoSimc).toBe(1);
+    });
+
+    it("skips healer specs", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(
+            db,
+            "u1",
+            sample({ name: "Healz", className: "priest", spec: "discipline" }),
+            "raw",
+        );
+        const r = enqueueForCharacter(db, c.id);
+        expect(r.enqueued).toBe(0);
+        expect(r.skippedHealer).toBe(1);
+    });
+
+    it("enqueues a single job for a valid non-healer character", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r = enqueueForCharacter(db, c.id);
+        expect(r.enqueued).toBe(1);
+        expect(r.jobIds).toHaveLength(1);
+    });
+
+    it("skips when the latest job is queued with the same simc snapshot", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r1 = enqueueForCharacter(db, c.id);
+        expect(r1.enqueued).toBe(1);
+        const r2 = enqueueForCharacter(db, c.id);
+        expect(r2.enqueued).toBe(0);
+        expect(r2.skippedDuplicate).toBe(1);
+    });
+
+    it("skips when the latest job is done with the same simc snapshot", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r1 = enqueueForCharacter(db, c.id);
+        markDone(db, r1.jobIds[0]!, "https://x/r/abc");
+        const r2 = enqueueForCharacter(db, c.id);
+        expect(r2.skippedDuplicate).toBe(1);
+    });
+
+    it("re-enqueues when the latest job failed", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r1 = enqueueForCharacter(db, c.id);
+        markFailed(db, r1.jobIds[0]!, "boom");
+        const r2 = enqueueForCharacter(db, c.id);
+        expect(r2.enqueued).toBe(1);
+    });
+
+    it("re-enqueues when the latest job was cancelled", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r1 = enqueueForCharacter(db, c.id);
+        cancelJob(db, r1.jobIds[0]!);
+        const r2 = enqueueForCharacter(db, c.id);
+        expect(r2.enqueued).toBe(1);
+    });
+
+    it("re-enqueues when the simc snapshot has changed since the last done job", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "old-simc");
+        const r1 = enqueueForCharacter(db, c.id);
+        markDone(db, r1.jobIds[0]!, "https://x/r/abc");
+        upsertCharacter(db, "u1", sample(), "new-simc");
+        const r2 = enqueueForCharacter(db, c.id);
+        expect(r2.enqueued).toBe(1);
     });
 });
 

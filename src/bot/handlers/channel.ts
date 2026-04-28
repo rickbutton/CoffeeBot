@@ -10,6 +10,7 @@ export function registerChannelHandler(
     client: Client,
     db: Db,
     triggerStatusUpdate: () => void,
+    pokeWorker: () => void,
 ): void {
     client.on("messageCreate", async (msg: Message) => {
         if (msg.author.bot || msg.channel.type !== ChannelType.GuildText) return;
@@ -21,6 +22,7 @@ export function registerChannelHandler(
             if (outcome.kind === "no-content") return;
 
             if (outcome.kind === "stored") {
+                if (outcome.enqueue.enqueued > 0) pokeWorker();
                 await react(msg, "✅");
                 triggerStatusUpdate();
             } else {

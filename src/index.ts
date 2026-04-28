@@ -47,8 +47,8 @@ async function main(): Promise<void> {
         onJobChange: triggerStatusUpdate,
     });
 
-    registerDmHandler(client, db, triggerStatusUpdate);
-    registerChannelHandler(client, db, triggerStatusUpdate);
+    registerDmHandler(client, db, triggerStatusUpdate, worker.poke);
+    registerChannelHandler(client, db, triggerStatusUpdate, worker.poke);
     registerInteractionHandler(
         client,
         db,

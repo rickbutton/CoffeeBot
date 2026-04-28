@@ -9,6 +9,11 @@ export type EnqueueResult = {
     skippedNoSimc: number;
     /** Healer specs skipped — Raidbots doesn't sim healers; we haven't wired QELive up yet. */
     skippedHealer: number;
+    /**
+     * Characters skipped because their latest queued/running/done job already covers this exact
+     * simc string. Only set by enqueueForCharacter — bulk paths re-sim regardless on purpose.
+     */
+    skippedDuplicate: number;
     jobIds: number[];
 };
 
@@ -37,6 +42,50 @@ export function enqueueAll(db: Db): EnqueueResult {
     return enqueueRows(db, db.select(ENQUEUE_COLUMNS).from(characters).all());
 }
 
+/**
+ * Enqueue a single character (used by the auto-enqueue-on-simc-paste path).
+ * Skips healers and skips when the latest queued/running/done job already has the same simc snapshot.
+ */
+export function enqueueForCharacter(db: Db, characterId: number): EnqueueResult {
+    const empty: EnqueueResult = {
+        enqueued: 0,
+        skippedNoSimc: 0,
+        skippedHealer: 0,
+        skippedDuplicate: 0,
+        jobIds: [],
+    };
+    const row = db
+        .select(ENQUEUE_COLUMNS)
+        .from(characters)
+        .where(eq(characters.id, characterId))
+        .get();
+    if (!row) return empty;
+    if (row.simc === null) return { ...empty, skippedNoSimc: 1 };
+    if (isHealerSpec(row.className, row.spec)) return { ...empty, skippedHealer: 1 };
+
+    const latest = db
+        .select({ status: simJobs.status, simcSnapshot: simJobs.simcSnapshot })
+        .from(simJobs)
+        .where(eq(simJobs.characterId, row.id))
+        .orderBy(sql`${simJobs.id} desc`)
+        .limit(1)
+        .get();
+    if (
+        latest &&
+        latest.simcSnapshot === row.simc &&
+        (latest.status === "queued" || latest.status === "running" || latest.status === "done")
+    ) {
+        return { ...empty, skippedDuplicate: 1 };
+    }
+
+    const inserted = db
+        .insert(simJobs)
+        .values({ characterId: row.id, simcSnapshot: row.simc })
+        .returning({ id: simJobs.id })
+        .get();
+    return { ...empty, enqueued: 1, jobIds: [inserted.id] };
+}
+
 function enqueueRows(db: Db, rows: EnqueueRow[]): EnqueueResult {
     let skippedNoSimc = 0;
     let skippedHealer = 0;
@@ -53,7 +102,7 @@ function enqueueRows(db: Db, rows: EnqueueRow[]): EnqueueResult {
         insertable.push({ id: r.id, simc: r.simc });
     }
     if (insertable.length === 0) {
-        return { enqueued: 0, skippedNoSimc, skippedHealer, jobIds: [] };
+        return { enqueued: 0, skippedNoSimc, skippedHealer, skippedDuplicate: 0, jobIds: [] };
     }
     const inserted = db
         .insert(simJobs)
@@ -61,7 +110,13 @@ function enqueueRows(db: Db, rows: EnqueueRow[]): EnqueueResult {
         .returning({ id: simJobs.id })
         .all();
     const jobIds = inserted.map((r) => r.id);
-    return { enqueued: jobIds.length, skippedNoSimc, skippedHealer, jobIds };
+    return {
+        enqueued: jobIds.length,
+        skippedNoSimc,
+        skippedHealer,
+        skippedDuplicate: 0,
+        jobIds,
+    };
 }
 
 export function claimNextJob(db: Db): SimJob | null {

@@ -2,6 +2,7 @@ import type { Attachment, Message } from "discord.js";
 import type { Db } from "../../db/client.js";
 import { upsertCharacter } from "../../db/repo.js";
 import { looksLikeSimc, parseSimc, type SimcCharacter } from "../../parser/simc.js";
+import { enqueueForCharacter, type EnqueueResult } from "../../queue/repo.js";
 import { log } from "../../util/log.js";
 
 const MAX_ATTACHMENT_BYTES = 1_000_000;
@@ -11,7 +12,13 @@ export type SimcOutcome =
     | { kind: "not-simc" }
     | { kind: "parse-error"; error: string }
     | { kind: "missing-spec" }
-    | { kind: "stored"; created: boolean; character: SimcCharacter; rowId: number }
+    | {
+          kind: "stored";
+          created: boolean;
+          character: SimcCharacter;
+          rowId: number;
+          enqueue: EnqueueResult;
+      }
     | { kind: "store-error" };
 
 export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutcome> {
@@ -25,6 +32,7 @@ export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutc
 
     try {
         const result = upsertCharacter(db, msg.author.id, parsed.character, text);
+        const enqueue = enqueueForCharacter(db, result.id);
         log.info(
             {
                 discordId: msg.author.id,
@@ -32,6 +40,9 @@ export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutc
                 created: result.created,
                 name: parsed.character.name,
                 spec: parsed.character.spec,
+                enqueued: enqueue.enqueued,
+                skippedHealer: enqueue.skippedHealer,
+                skippedDuplicate: enqueue.skippedDuplicate,
             },
             "stored character",
         );
@@ -40,11 +51,19 @@ export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutc
             created: result.created,
             character: parsed.character,
             rowId: result.id,
+            enqueue,
         };
     } catch (err) {
         log.error({ err, discordId: msg.author.id }, "failed to store character");
         return { kind: "store-error" };
     }
+}
+
+export function enqueueSuffix(r: EnqueueResult): string {
+    if (r.enqueued > 0) return " :gear: Sim queued.";
+    if (r.skippedDuplicate > 0) return " (Already simmed this exact simc — skipping.)";
+    if (r.skippedHealer > 0) return " (Healer spec — sim manually in QELive.)";
+    return "";
 }
 
 async function resolveSimcText(msg: Message): Promise<string | null> {

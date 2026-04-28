@@ -14,7 +14,7 @@ The bot owns one message in that channel and keeps it in lock-step with the data
 
 - **Storage** — SQLite (drizzle ORM). One row per (owner, region, realm, name, **spec**); same character with multiple specs are tracked independently. Admin can pre-register characters via `/characters register` so the roster shows up before any simc has been submitted.
 - **Status channel** — `/status setup #channel` designates a channel; the bot posts an embed with the roster, instructions, and a per-character status line (✅ fresh / ⚠️ stale / 🔴 missing, plus the latest sim's link or state). Players paste simcs there; bot reacts ✅, deletes the paste after 5s, and edits the embed (debounced).
-- **Sim queue + worker** — single-concurrency worker with jittered pacing, per-day cap, and auto-pause + admin DM after 3 consecutive failures. Status updates fire on every job state transition.
+- **Sim queue + worker** — single-concurrency worker with jittered pacing, per-day cap, and auto-pause + admin DM after 3 consecutive failures. Status updates fire on every job state transition. A sim is auto-enqueued whenever a player submits a simc (DM or status channel); pastes whose simc string matches the latest queued/running/done job are skipped so re-pastes don't burn the cap. Admins can still bulk-trigger via `/sim run` / `/sim run-all`.
 - **Raidbots automation** (Playwright, persistent Chromium profile) — auto-login (when `RAIDBOTS_EMAIL`/`RAIDBOTS_PASSWORD` are set), source / difficulty / fight-style configurable, always picks max upgrade ilvl, completes when the report page title flips off the in-progress placeholder. Behind the `RAIDBOTS_EXECUTOR=playwright` flag (default `stub`).
 - **Reminders** — `/sim request-simcs [mode:all|stale]` DMs each player asking for a refresh; optional cron schedule via `REQUEST_SIMCS_CRON`. DM points at the status channel; DMing the bot directly still works as a fallback.
 - **Slash commands** auto-register on every boot.
@@ -44,7 +44,7 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | | |
 |---|---|
 | `pnpm dev` / `pnpm start` | Run the bot (watch / built) |
-| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (170 tests, ~98% line coverage) |
+| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (188 tests, ~98% line coverage) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm format` | TS check (covers source **and** tests via [tsconfig.test.json](tsconfig.test.json)), ESLint, Prettier |
 | `pnpm db:generate` / `pnpm db:migrate` | Drizzle migrations |
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |

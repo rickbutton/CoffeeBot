@@ -42,7 +42,7 @@ describe("registerChannelHandler", () => {
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerChannelHandler(client, db, trigger);
+        registerChannelHandler(client, db, trigger, () => {});
 
         (client as unknown as EventEmitter).emit("messageCreate", makeMsg({ bot: true }));
         (client as unknown as EventEmitter).emit(
@@ -61,35 +61,51 @@ describe("registerChannelHandler", () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerChannelHandler(client, db, trigger);
+        registerChannelHandler(client, db, trigger, () => {});
         (client as unknown as EventEmitter).emit("messageCreate", makeMsg({}));
         await flush();
         expect(trigger).not.toHaveBeenCalled();
     });
 
-    it("reacts ✅ on stored, schedules delete, triggers status update", async () => {
+    it("reacts ✅ on stored, schedules delete, triggers status update, pokes worker", async () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerChannelHandler(client, db, trigger);
+        const poke = vi.fn();
+        registerChannelHandler(client, db, trigger, poke);
 
         const msg = makeMsg({});
         (client as unknown as EventEmitter).emit("messageCreate", msg);
         await flush();
         expect(msg.react).toHaveBeenCalledWith("✅");
         expect(trigger).toHaveBeenCalled();
+        expect(poke).toHaveBeenCalled();
         // Run scheduled delete
         vi.advanceTimersByTime(6000);
         await flush();
         expect(msg.delete).toHaveBeenCalled();
     });
 
+    it("does not poke when paste is a duplicate of the last job", async () => {
+        const db = makeTestDb();
+        setStatusChannel(db, "chan1", "msg");
+        const client = new EventEmitter() as never;
+        const poke = vi.fn();
+        registerChannelHandler(client, db, () => {}, poke);
+        (client as unknown as EventEmitter).emit("messageCreate", makeMsg({}));
+        await flush();
+        expect(poke).toHaveBeenCalledTimes(1);
+        (client as unknown as EventEmitter).emit("messageCreate", makeMsg({}));
+        await flush();
+        expect(poke).toHaveBeenCalledTimes(1);
+    });
+
     it("reacts ❌ and replies on parse error", async () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerChannelHandler(client, db, () => {});
+        registerChannelHandler(client, db, () => {}, () => {});
 
         const broken =
             `hunter="Bowzo"\nregion=us\nspec=beast_mastery\n` + "x".repeat(40);
@@ -104,7 +120,7 @@ describe("registerChannelHandler", () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerChannelHandler(client, db, () => {});
+        registerChannelHandler(client, db, () => {}, () => {});
         const msg = makeMsg({ content: "" });
         (client as unknown as EventEmitter).emit("messageCreate", msg);
         await flush();
@@ -121,7 +137,7 @@ describe("registerChannelHandler", () => {
         });
         try {
             const client = new EventEmitter() as never;
-            registerChannelHandler(client, db, () => {});
+            registerChannelHandler(client, db, () => {}, () => {});
             const msg = makeMsg({});
             (client as unknown as EventEmitter).emit("messageCreate", msg);
             await flush();
@@ -144,7 +160,7 @@ describe("registerChannelHandler", () => {
         });
         try {
             const client = new EventEmitter() as never;
-            registerChannelHandler(client, db, () => {});
+            registerChannelHandler(client, db, () => {}, () => {});
             const msg = makeMsg({});
             // Make `react` throw to exercise the outer try/catch.
             msg.react.mockImplementation(async () => {
@@ -161,7 +177,7 @@ describe("registerChannelHandler", () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerChannelHandler(client, db, () => {});
+        registerChannelHandler(client, db, () => {}, () => {});
         const msg = makeMsg({});
         msg.delete.mockImplementation(async () => {
             throw new Error("perm denied");
@@ -177,7 +193,7 @@ describe("registerChannelHandler", () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerChannelHandler(client, db, () => {});
+        registerChannelHandler(client, db, () => {}, () => {});
 
         const notSimc = makeMsg({ content: "hi" });
         (client as unknown as EventEmitter).emit("messageCreate", notSimc);

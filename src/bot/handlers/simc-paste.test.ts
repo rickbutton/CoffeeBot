@@ -52,10 +52,13 @@ server=area-52
         expect(r.kind).toBe("stored");
         if (r.kind !== "stored") return;
         expect(r.created).toBe(true);
+        expect(r.enqueue.enqueued).toBe(1);
         expect(listCharacters(db, "user1")).toHaveLength(1);
         const r2 = await processSimcMessage(db, makeMsg(VALID_SIMC));
         if (r2.kind !== "stored") return;
         expect(r2.created).toBe(false);
+        expect(r2.enqueue.enqueued).toBe(0);
+        expect(r2.enqueue.skippedDuplicate).toBe(1);
     });
 
     it("returns store-error when DB write throws", async () => {
