@@ -12,6 +12,7 @@ beforeEach(() => {
             k.startsWith("SIM_") ||
             k.startsWith("RAIDBOTS_") ||
             k.startsWith("PLAYWRIGHT_") ||
+            k.startsWith("QELIVE_") ||
             k.startsWith("REQUEST_SIMCS_") ||
             k === "DB_PATH" ||
             k === "LOG_LEVEL"
@@ -43,6 +44,8 @@ describe("loadConfig", () => {
         expect(cfg.sim).toEqual({ minDelaySeconds: 75, maxDelaySeconds: 120, dailyCap: 30 });
         expect(cfg.raidbots.executor).toBe("stub");
         expect(cfg.raidbots.credentials).toBe(null);
+        expect(cfg.qelive.userDataDir).toBe("./data/qelive-profile");
+        expect(cfg.qelive.headless).toBe(true);
         expect(cfg.requestSimcs.cron).toBe(null);
         expect(cfg.requestSimcs.staleDays).toBe(7);
     });

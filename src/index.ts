@@ -12,8 +12,11 @@ import { makeStatusUpdater, updateStatusMessage } from "./bot/status-message.js"
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/client.js";
 import { getCharacterById, listKnownDiscordIds } from "./db/repo.js";
+import { makeDispatchExecutor } from "./queue/dispatch.js";
 import { markWowauditUploaded } from "./queue/repo.js";
 import { startWorker, stubExecutor, type Executor } from "./queue/worker.js";
+import { makeQELiveExecutor } from "./qelive/executor.js";
+import { QELiveSession } from "./qelive/session.js";
 import { makeRaidbotsExecutor } from "./raidbots/executor.js";
 import { RaidbotsSession } from "./raidbots/session.js";
 import { log } from "./util/log.js";
@@ -26,20 +29,34 @@ async function main(): Promise<void> {
     log.info({ dbPath: config.dbPath }, "db ready");
 
     let raidbotsSession: RaidbotsSession | null = null;
+    let qeliveSession: QELiveSession | null = null;
     let executor: Executor;
     if (config.raidbots.executor === "playwright") {
         raidbotsSession = new RaidbotsSession({
             userDataDir: config.raidbots.userDataDir,
             headless: config.raidbots.headless,
         });
-        executor = makeRaidbotsExecutor(raidbotsSession, config.raidbots.credentials);
+        qeliveSession = new QELiveSession({
+            userDataDir: config.qelive.userDataDir,
+            headless: config.qelive.headless,
+        });
+        const raidbotsExecutor = makeRaidbotsExecutor(
+            raidbotsSession,
+            config.raidbots.credentials,
+        );
+        const qeliveExecutor = makeQELiveExecutor(qeliveSession, db);
+        executor = makeDispatchExecutor({
+            db,
+            raidbots: raidbotsExecutor,
+            qelive: qeliveExecutor,
+        });
         log.info(
-            { ...config.raidbots, credentials: undefined },
-            "using playwright raidbots executor",
+            { ...config.raidbots, credentials: undefined, qelive: config.qelive },
+            "using playwright dispatch executor (raidbots + qelive)",
         );
     } else {
         executor = stubExecutor;
-        log.info("using stub raidbots executor (no real sims will run)");
+        log.info("using stub executor (no real sims will run)");
     }
 
     const client = createClient();
@@ -125,6 +142,7 @@ async function main(): Promise<void> {
         worker
             .stop()
             .finally(() => raidbotsSession?.close())
+            .finally(() => qeliveSession?.close())
             .finally(() => client.destroy().finally(() => process.exit(0)));
     };
     process.on("SIGINT", () => shutdown("SIGINT"));

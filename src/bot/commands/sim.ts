@@ -5,8 +5,15 @@ import {
     SlashCommandBuilder,
 } from "discord.js";
 import type { Db } from "../../db/client.js";
+import { findCharactersByNameSpec } from "../../db/repo.js";
 import { utcDayStart } from "../../queue/pacing.js";
-import { cancelJob, enqueueAll, enqueueForOwner, queueStatus } from "../../queue/repo.js";
+import {
+    cancelJob,
+    enqueueAll,
+    enqueueForCharacter,
+    enqueueForOwner,
+    queueStatus,
+} from "../../queue/repo.js";
 import type { WorkerHandle } from "../../queue/worker.js";
 import { backfillWowaudit } from "../../wowaudit/backfill.js";
 import type { Uploader } from "../../wowaudit/upload.js";
@@ -27,6 +34,25 @@ export const simCommand = new SlashCommandBuilder()
             .setDescription("Enqueue sim jobs for one user's characters.")
             .addUserOption((o) =>
                 o.setName("user").setDescription("Whose characters to sim").setRequired(true),
+            ),
+    )
+    .addSubcommand((s) =>
+        s
+            .setName("run-character")
+            .setDescription(
+                "Force-enqueue a sim for one (name, spec) — bypasses the same-simc skip.",
+            )
+            .addStringOption((o) =>
+                o
+                    .setName("name")
+                    .setDescription("Character name (case-insensitive)")
+                    .setRequired(true),
+            )
+            .addStringOption((o) =>
+                o
+                    .setName("spec")
+                    .setDescription("Spec, e.g. discipline, marksmanship")
+                    .setRequired(true),
             ),
     )
     .addSubcommand((s) => s.setName("status").setDescription("Show queue status."))
@@ -89,12 +115,54 @@ export async function handleSimCommand(
         const target = interaction.options.getUser("user", true);
         const r = enqueueForOwner(db, target.id);
         worker.poke();
-        const nothingMatched =
-            r.enqueued === 0 && r.skippedNoSimc === 0 && r.skippedHealer === 0;
+        const nothingMatched = r.enqueued === 0 && r.skippedNoSimc === 0;
         await interaction.reply({
             content: nothingMatched
                 ? `<@${target.id}> has no stored characters.`
                 : `:gear: Enqueued **${r.enqueued}** job(s) for <@${target.id}>${skippedSuffix(r)}.`,
+            flags: EPHEMERAL,
+            allowedMentions: { parse: [] },
+        });
+        return;
+    }
+
+    if (sub === "run-character") {
+        const name = interaction.options.getString("name", true);
+        const spec = interaction.options.getString("spec", true);
+        const matches = findCharactersByNameSpec(db, name, spec);
+        if (matches.length === 0) {
+            await interaction.reply({
+                content: `:question: No character matches **${name}** / *${spec}*.`,
+                flags: EPHEMERAL,
+            });
+            return;
+        }
+        if (matches.length > 1) {
+            const lines = matches.map(
+                (c) => `• <@${c.discordId}> — ${c.name} (${c.region}-${c.realm})`,
+            );
+            await interaction.reply({
+                content:
+                    `:warning: Multiple characters match **${name}** / *${spec}*:\n` +
+                    lines.join("\n") +
+                    "\nUse `/sim run user:@owner` instead to disambiguate.",
+                flags: EPHEMERAL,
+                allowedMentions: { parse: [] },
+            });
+            return;
+        }
+        const target = matches[0]!;
+        const r = enqueueForCharacter(db, target.id, { force: true });
+        worker.poke();
+        if (r.skippedNoSimc > 0) {
+            await interaction.reply({
+                content: `:no_entry: **${target.name}** *(${target.spec ?? "?"})* has no stored simc yet.`,
+                flags: EPHEMERAL,
+            });
+            return;
+        }
+        await interaction.reply({
+            content: `:gear: Force-enqueued sim for **${target.name}** *(${target.spec ?? "?"})* — owner <@${target.discordId}>.`,
             flags: EPHEMERAL,
             allowedMentions: { parse: [] },
         });
@@ -193,11 +261,8 @@ export async function handleSimCommand(
     }
 }
 
-function skippedSuffix(r: { skippedNoSimc: number; skippedHealer: number }): string {
+function skippedSuffix(r: { skippedNoSimc: number }): string {
     const parts: string[] = [];
     if (r.skippedNoSimc > 0) parts.push(`${r.skippedNoSimc} no simc submitted yet`);
-    if (r.skippedHealer > 0) {
-        parts.push(`${r.skippedHealer} healer spec(s) — sim manually in QELive`);
-    }
     return parts.length > 0 ? ` (skipped ${parts.join("; ")})` : "";
 }

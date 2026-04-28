@@ -34,11 +34,10 @@ describe("enqueueForOwner / enqueueAll", () => {
         const r = enqueueForOwner(db, "u1");
         expect(r.enqueued).toBe(2);
         expect(r.skippedNoSimc).toBe(1);
-        expect(r.skippedHealer).toBe(0);
         expect(r.jobIds).toHaveLength(2);
     });
 
-    it("skips healer specs and reports them separately", () => {
+    it("enqueues healer specs alongside non-healers (qelive executor handles them)", () => {
         const db = makeTestDb();
         upsertCharacter(db, "u1", sample({ name: "Bowzo" }), "raw");
         upsertCharacter(
@@ -54,9 +53,8 @@ describe("enqueueForOwner / enqueueAll", () => {
             "raw",
         );
         const r = enqueueForOwner(db, "u1");
-        expect(r.enqueued).toBe(1);
+        expect(r.enqueued).toBe(3);
         expect(r.skippedNoSimc).toBe(0);
-        expect(r.skippedHealer).toBe(2);
     });
 
     it("enqueueAll covers all owners", () => {
@@ -65,7 +63,6 @@ describe("enqueueForOwner / enqueueAll", () => {
         upsertCharacter(db, "u2", sample({ name: "B" }), "raw");
         const r = enqueueAll(db);
         expect(r.enqueued).toBe(2);
-        expect(r.skippedHealer).toBe(0);
     });
 });
 
@@ -76,7 +73,6 @@ describe("enqueueForCharacter", () => {
         expect(r).toEqual({
             enqueued: 0,
             skippedNoSimc: 0,
-            skippedHealer: 0,
             skippedDuplicate: 0,
             jobIds: [],
         });
@@ -98,7 +94,7 @@ describe("enqueueForCharacter", () => {
         expect(r.skippedNoSimc).toBe(1);
     });
 
-    it("skips healer specs", () => {
+    it("enqueues healer specs (qelive executor handles them)", () => {
         const db = makeTestDb();
         const c = upsertCharacter(
             db,
@@ -107,11 +103,11 @@ describe("enqueueForCharacter", () => {
             "raw",
         );
         const r = enqueueForCharacter(db, c.id);
-        expect(r.enqueued).toBe(0);
-        expect(r.skippedHealer).toBe(1);
+        expect(r.enqueued).toBe(1);
+        expect(r.jobIds).toHaveLength(1);
     });
 
-    it("enqueues a single job for a valid non-healer character", () => {
+    it("enqueues a single job for a valid character", () => {
         const db = makeTestDb();
         const c = upsertCharacter(db, "u1", sample(), "raw");
         const r = enqueueForCharacter(db, c.id);
@@ -127,6 +123,16 @@ describe("enqueueForCharacter", () => {
         const r2 = enqueueForCharacter(db, c.id);
         expect(r2.enqueued).toBe(0);
         expect(r2.skippedDuplicate).toBe(1);
+    });
+
+    it("force=true bypasses the duplicate-skip check", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const r1 = enqueueForCharacter(db, c.id);
+        expect(r1.enqueued).toBe(1);
+        const r2 = enqueueForCharacter(db, c.id, { force: true });
+        expect(r2.enqueued).toBe(1);
+        expect(r2.skippedDuplicate).toBe(0);
     });
 
     it("skips when the latest job is done with the same simc snapshot", () => {

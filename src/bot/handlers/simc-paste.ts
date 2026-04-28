@@ -41,7 +41,6 @@ export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutc
                 name: parsed.character.name,
                 spec: parsed.character.spec,
                 enqueued: enqueue.enqueued,
-                skippedHealer: enqueue.skippedHealer,
                 skippedDuplicate: enqueue.skippedDuplicate,
             },
             "stored character",
@@ -62,7 +61,6 @@ export async function processSimcMessage(db: Db, msg: Message): Promise<SimcOutc
 export function enqueueSuffix(r: EnqueueResult): string {
     if (r.enqueued > 0) return " :gear: Sim queued.";
     if (r.skippedDuplicate > 0) return " (Already simmed this exact simc — skipping.)";
-    if (r.skippedHealer > 0) return " (Healer spec — sim manually in QELive.)";
     return "";
 }
 

@@ -169,6 +169,22 @@ export function getCharacterById(db: Db, id: number): Character | null {
     return db.select().from(characters).where(eq(characters.id, id)).get() ?? null;
 }
 
+// Case-insensitive lookup for the admin "force a sim by name+spec" path. Returns
+// every matching row so the caller can disambiguate when (name, spec) isn't unique
+// (e.g. same toon on multiple owners or realms).
+export function findCharactersByNameSpec(db: Db, name: string, spec: string): Character[] {
+    return db
+        .select()
+        .from(characters)
+        .where(
+            and(
+                sql`lower(${characters.name}) = ${name.toLowerCase()}`,
+                sql`lower(${characters.spec}) = ${spec.toLowerCase()}`,
+            ),
+        )
+        .all();
+}
+
 export function latestJobsByCharacter(db: Db): Map<number, SimJob> {
     const rows = db
         .select()

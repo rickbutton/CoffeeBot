@@ -91,7 +91,7 @@ describe("registerDmHandler", () => {
         expect(reply).toMatch(/Already simmed/);
     });
 
-    it("does not poke when the spec is a healer", async () => {
+    it("pokes the worker even for healer specs (qelive executor handles them)", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const poke = vi.fn();
@@ -108,8 +108,8 @@ spec=discipline
         const msg = makeMsg({ content: healerSimc, onReply: (c) => (reply = c) });
         (client as unknown as EventEmitter).emit("messageCreate", msg);
         await flush();
-        expect(reply).toMatch(/Healer spec/);
-        expect(poke).not.toHaveBeenCalled();
+        expect(reply).toMatch(/Sim queued/);
+        expect(poke).toHaveBeenCalled();
     });
 
     it("replies with parse-error for malformed simc", async () => {

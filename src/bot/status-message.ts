@@ -8,7 +8,6 @@ import {
     setBotState,
 } from "../db/repo.js";
 import type { Character, SimJob } from "../db/schema.js";
-import { isHealerSpec } from "../parser/simc.js";
 import { groupBy, truncate } from "../util/format.js";
 import { log } from "../util/log.js";
 
@@ -78,9 +77,7 @@ export function renderStatusEmbed(db: Db, staleDays: number): EmbedBuilder {
 
 function formatLine(c: Character, staleDays: number, job: SimJob | undefined): string {
     const head = `**${c.name}** *(${c.spec ?? "?"})*`;
-    const sim = isHealerSpec(c.className, c.spec)
-        ? " · sim: ⊘ healer (use QELive)"
-        : formatSimStatus(c, job);
+    const sim = formatSimStatus(c, job);
     if (c.simc === null) return `:red_circle: ${head} — _never submitted_${sim}`;
     const updated = `<t:${Math.floor(c.updatedAt.getTime() / 1000)}:R>`;
     if (isStale(c, staleDays)) {

@@ -56,7 +56,7 @@ describe("handleSimCommand subcommands", () => {
         expect(r.content).toMatch(/Enqueued/);
     });
 
-    it("run-all reports skipped healers in the suffix", async () => {
+    it("run-all enqueues healer specs alongside non-healers", async () => {
         const db = makeTestDb();
         upsertCharacter(db, "u1", sample(), "raw");
         upsertCharacter(
@@ -68,8 +68,8 @@ describe("handleSimCommand subcommands", () => {
         const i = makeInteraction({ sub: "run-all" });
         await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7, null);
         const r = i.reply.mock.calls[0]![0] as { content: string };
-        expect(r.content).toMatch(/Enqueued \*\*1\*\*/);
-        expect(r.content).toMatch(/healer spec\(s\) — sim manually in QELive/);
+        expect(r.content).toMatch(/Enqueued \*\*2\*\*/);
+        expect(r.content).not.toMatch(/healer/i);
     });
 
     it("run reports no characters when target has none", async () => {
@@ -87,6 +87,74 @@ describe("handleSimCommand subcommands", () => {
         await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7, null);
         const r = i.reply.mock.calls[0]![0] as { content: string };
         expect(r.content).toMatch(/Enqueued \*\*1\*\*/);
+    });
+
+    it("run-character force-enqueues a duplicate sim and pokes", async () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample({ name: "Bowzo", spec: "marksmanship" }), "raw");
+        // Pre-enqueue the same simc so the non-force path would have skipped.
+        const worker = makeWorker();
+        const first = makeInteraction({
+            sub: "run-character",
+            options: { name: "Bowzo", spec: "marksmanship" },
+        });
+        await handleSimCommand(first as never, db, worker, new Set(["admin"]), 7, null);
+        const second = makeInteraction({
+            sub: "run-character",
+            options: { name: "bowzo", spec: "MARKSMANSHIP" },
+        });
+        await handleSimCommand(second as never, db, worker, new Set(["admin"]), 7, null);
+        const r = second.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/Force-enqueued/);
+        expect(worker.poke).toHaveBeenCalledTimes(2);
+        const queued = db.select().from(simJobs).all();
+        expect(queued.length).toBe(2);
+    });
+
+    it("run-character reports when no character matches", async () => {
+        const db = makeTestDb();
+        const i = makeInteraction({
+            sub: "run-character",
+            options: { name: "Ghost", spec: "fire" },
+        });
+        await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7, null);
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/No character matches/);
+    });
+
+    it("run-character lists all matches when (name, spec) is ambiguous", async () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample({ name: "Bowzo" }), "raw");
+        upsertCharacter(db, "u2", sample({ name: "Bowzo" }), "raw");
+        const i = makeInteraction({
+            sub: "run-character",
+            options: { name: "Bowzo", spec: "beast_mastery" },
+        });
+        await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7, null);
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/Multiple characters match/);
+        expect(r.content).toMatch(/<@u1>/);
+        expect(r.content).toMatch(/<@u2>/);
+    });
+
+    it("run-character reports when the matched character has no simc yet", async () => {
+        const db = makeTestDb();
+        const { addCharacterRoster } = await import("../../db/repo.js");
+        addCharacterRoster(db, {
+            discordId: "u1",
+            name: "Newbie",
+            realm: "r",
+            region: "us",
+            className: "mage",
+            specs: ["fire"],
+        });
+        const i = makeInteraction({
+            sub: "run-character",
+            options: { name: "Newbie", spec: "fire" },
+        });
+        await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7, null);
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/no stored simc/);
     });
 
     it("status renders even with no jobs", async () => {

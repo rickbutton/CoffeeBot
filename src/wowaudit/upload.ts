@@ -12,11 +12,19 @@ export type WowauditUploadInput = {
 
 export type WowauditUploadResult = { ok: true } | { ok: false; error: string };
 
-const REPORT_ID_RE = /\/simbot\/report\/([A-Za-z0-9_-]+)/;
+// Raidbots droptimizer URLs and QELive Upgrade Finder URLs both encode the
+// report id as the last path segment under their respective namespaces.
+const REPORT_ID_PATTERNS = [
+    /\/simbot\/report\/([A-Za-z0-9_-]+)/,
+    /\/live\/upgradereport\/([A-Za-z0-9_-]+)/,
+];
 
 export function extractReportId(reportUrl: string): string | null {
-    const m = reportUrl.match(REPORT_ID_RE);
-    return m ? (m[1] ?? null) : null;
+    for (const re of REPORT_ID_PATTERNS) {
+        const m = reportUrl.match(re);
+        if (m) return m[1] ?? null;
+    }
+    return null;
 }
 
 export type FetchLike = (

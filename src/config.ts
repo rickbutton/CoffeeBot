@@ -19,6 +19,8 @@ const Schema = z.object({
     RAIDBOTS_EMAIL: z.string().optional(),
     RAIDBOTS_PASSWORD: z.string().optional(),
 
+    QELIVE_USER_DATA_DIR: z.string().default("./data/qelive-profile"),
+
     REQUEST_SIMCS_CRON: z.string().default(""),
     REQUEST_SIMCS_STALE_DAYS: z.coerce.number().int().min(1).default(7),
 
@@ -42,6 +44,10 @@ export type Config = {
         userDataDir: string;
         headless: boolean;
         credentials: { email: string; password: string } | null;
+    };
+    qelive: {
+        userDataDir: string;
+        headless: boolean;
     };
     requestSimcs: {
         cron: string | null;
@@ -85,6 +91,10 @@ export function loadConfig(): Config {
                 env.RAIDBOTS_EMAIL && env.RAIDBOTS_PASSWORD
                     ? { email: env.RAIDBOTS_EMAIL, password: env.RAIDBOTS_PASSWORD }
                     : null,
+        },
+        qelive: {
+            userDataDir: env.QELIVE_USER_DATA_DIR,
+            headless: env.PLAYWRIGHT_HEADLESS,
         },
         requestSimcs: {
             cron: env.REQUEST_SIMCS_CRON.trim() || null,

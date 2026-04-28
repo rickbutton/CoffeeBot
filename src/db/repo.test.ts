@@ -5,6 +5,7 @@ import {
     addCharacterRoster,
     deleteBotState,
     deleteCharacter,
+    findCharactersByNameSpec,
     getBotState,
     getCharacterById,
     latestJobsByCharacter,
@@ -142,6 +143,33 @@ describe("getCharacterById", () => {
         const found = getCharacterById(db, c.id);
         expect(found?.name).toBe("Bowzo");
         expect(getCharacterById(db, 9999)).toBe(null);
+    });
+});
+
+describe("findCharactersByNameSpec", () => {
+    it("matches case-insensitively on name and spec", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(
+            db,
+            "u1",
+            sampleParsed({ name: "Bowzo", spec: "marksmanship" }),
+            "raw",
+        );
+        const found = findCharactersByNameSpec(db, "bowzo", "MARKSMANSHIP");
+        expect(found).toHaveLength(1);
+        expect(found[0]!.id).toBe(c.id);
+    });
+
+    it("returns multiple rows when (name, spec) collides across owners", () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sampleParsed({ name: "Bowzo" }), "raw");
+        upsertCharacter(db, "u2", sampleParsed({ name: "Bowzo" }), "raw");
+        expect(findCharactersByNameSpec(db, "bowzo", "beast_mastery")).toHaveLength(2);
+    });
+
+    it("returns empty when nothing matches", () => {
+        const db = makeTestDb();
+        expect(findCharactersByNameSpec(db, "ghost", "fire")).toEqual([]);
     });
 });
 

@@ -22,6 +22,12 @@ describe("extractReportId", () => {
         expect(extractReportId("https://raidbots.com/simbot/report/zzz")).toBe("zzz");
     });
 
+    it("pulls the id from a QELive upgrade-finder URL", () => {
+        expect(
+            extractReportId("https://questionablyepic.com/live/upgradereport/huqlwvjiurlq"),
+        ).toBe("huqlwvjiurlq");
+    });
+
     it("returns null when the URL doesn't have a report id", () => {
         expect(extractReportId("https://raidbots.com/")).toBe(null);
         expect(extractReportId("not a url")).toBe(null);

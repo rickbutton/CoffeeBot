@@ -15,6 +15,7 @@ export default defineConfig({
                 "src/test-utils/**",
                 "src/db/migrate.ts",
                 "src/raidbots/test-sim.ts",
+                "src/qelive/test-sim.ts",
                 "src/bot/register-commands.ts",
                 "src/index.ts",
             ],

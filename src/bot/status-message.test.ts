@@ -157,7 +157,7 @@ describe("renderStatusEmbed", () => {
         expect(desc).toContain("(boom)");
     });
 
-    it("renders healer specs with the QELive hint instead of a sim status", () => {
+    it("renders healer specs the same as everyone else now (qelive sims them)", () => {
         const db = makeTestDb();
         const c = upsertCharacter(
             db,
@@ -165,18 +165,17 @@ describe("renderStatusEmbed", () => {
             sample({ name: "Healz", className: "priest", spec: "discipline" }),
             "raw",
         );
-        // Even if a stale job row exists, healers shouldn't show a regular sim status.
         db.insert(simJobs)
             .values({
                 characterId: c.id,
                 simcSnapshot: "raw",
                 status: "done",
-                reportUrl: "https://x/r/abc",
+                reportUrl: "https://questionablyepic.com/live/upgradereport/abc",
             })
             .run();
         const desc = renderStatusEmbed(db, 7).toJSON().description!;
-        expect(desc).toContain("healer (use QELive)");
-        expect(desc).not.toContain("https://x/r/abc");
+        expect(desc).not.toContain("healer (use QELive)");
+        expect(desc).toContain("https://questionablyepic.com/live/upgradereport/abc");
     });
 });
 
