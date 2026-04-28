@@ -23,7 +23,7 @@ export type SimSettings = {
 
 export const SIM_SETTINGS: SimSettings = {
     source: "Season 1 Raids",
-    difficulty: "heroic",
+    difficulty: "mythic",
     fightStyle: "patchwerk",
 };
 
