@@ -5,7 +5,6 @@ const CFG = {
     minDelaySeconds: 60,
     maxDelaySeconds: 120,
     dailyCap: 5,
-    activeHoursUtc: null,
 };
 
 describe("jitterDelayMs", () => {
@@ -20,7 +19,7 @@ describe("jitterDelayMs", () => {
 });
 
 describe("evaluateGate", () => {
-    it("allows when under cap and no window", () => {
+    it("allows when under cap", () => {
         expect(evaluateGate(CFG, new Date("2026-04-27T12:00:00Z"), 0)).toEqual({
             gate: "allow",
         });
@@ -32,29 +31,6 @@ describe("evaluateGate", () => {
         if (r.gate !== "wait") throw new Error("expected wait");
         expect(r.reason).toMatch(/daily cap/);
         expect(new Date(r.resumeAtMs).toISOString()).toBe("2026-04-28T00:00:00.000Z");
-    });
-
-    it("respects an active window (no wrap)", () => {
-        const cfg = { ...CFG, activeHoursUtc: { startHour: 3, endHour: 10 } };
-        expect(evaluateGate(cfg, new Date("2026-04-27T05:00:00Z"), 0)).toEqual({
-            gate: "allow",
-        });
-        const r = evaluateGate(cfg, new Date("2026-04-27T12:00:00Z"), 0);
-        if (r.gate !== "wait") throw new Error("expected wait");
-        expect(new Date(r.resumeAtMs).toISOString()).toBe("2026-04-28T03:00:00.000Z");
-    });
-
-    it("respects a wrap-around window", () => {
-        const cfg = { ...CFG, activeHoursUtc: { startHour: 22, endHour: 4 } };
-        expect(evaluateGate(cfg, new Date("2026-04-27T23:00:00Z"), 0)).toEqual({
-            gate: "allow",
-        });
-        expect(evaluateGate(cfg, new Date("2026-04-27T03:00:00Z"), 0)).toEqual({
-            gate: "allow",
-        });
-        const r = evaluateGate(cfg, new Date("2026-04-27T10:00:00Z"), 0);
-        if (r.gate !== "wait") throw new Error("expected wait");
-        expect(new Date(r.resumeAtMs).toISOString()).toBe("2026-04-27T22:00:00.000Z");
     });
 });
 

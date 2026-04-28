@@ -14,7 +14,7 @@ The bot owns one message in that channel and keeps it in lock-step with the data
 
 - **Storage** — SQLite (drizzle ORM). One row per (owner, region, realm, name, **spec**); same character with multiple specs are tracked independently. Admin can pre-register characters via `/characters register` so the roster shows up before any simc has been submitted.
 - **Status channel** — `/status setup #channel` designates a channel; the bot posts an embed with the roster, instructions, and a per-character status line (✅ fresh / ⚠️ stale / 🔴 missing, plus the latest sim's link or state). Players paste simcs there; bot reacts ✅, deletes the paste after 5s, and edits the embed (debounced).
-- **Sim queue + worker** — single-concurrency worker with jittered pacing, per-day cap, optional UTC active-hours window, and auto-pause + admin DM after 3 consecutive failures. Status updates fire on every job state transition.
+- **Sim queue + worker** — single-concurrency worker with jittered pacing, per-day cap, and auto-pause + admin DM after 3 consecutive failures. Status updates fire on every job state transition.
 - **Raidbots automation** (Playwright, persistent Chromium profile) — auto-login (when `RAIDBOTS_EMAIL`/`RAIDBOTS_PASSWORD` are set), source / difficulty / fight-style configurable, always picks max upgrade ilvl, completes when the report page title flips off the in-progress placeholder. Behind the `RAIDBOTS_EXECUTOR=playwright` flag (default `stub`).
 - **Reminders** — `/sim request-simcs [mode:all|stale]` DMs each player asking for a refresh; optional cron schedule via `REQUEST_SIMCS_CRON`. DM points at the status channel; DMing the bot directly still works as a fallback.
 - **Slash commands** auto-register on every boot.

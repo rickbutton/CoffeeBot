@@ -12,7 +12,6 @@ const Schema = z.object({
     SIM_MIN_DELAY_SECONDS: z.coerce.number().int().min(1).default(75),
     SIM_MAX_DELAY_SECONDS: z.coerce.number().int().min(1).default(120),
     SIM_DAILY_CAP: z.coerce.number().int().min(1).default(30),
-    SIM_ACTIVE_HOURS_UTC: z.string().default(""),
 
     RAIDBOTS_EXECUTOR: z.enum(["stub", "playwright"]).default("stub"),
     PLAYWRIGHT_USER_DATA_DIR: z.string().default("./data/chromium-profile"),
@@ -24,8 +23,6 @@ const Schema = z.object({
     REQUEST_SIMCS_STALE_DAYS: z.coerce.number().int().min(1).default(7),
 });
 
-export type ActiveHours = { startHour: number; endHour: number } | null;
-
 export type Config = {
     discordToken: string;
     discordAppId: string;
@@ -36,7 +33,6 @@ export type Config = {
         minDelaySeconds: number;
         maxDelaySeconds: number;
         dailyCap: number;
-        activeHoursUtc: ActiveHours;
     };
     raidbots: {
         executor: "stub" | "playwright";
@@ -76,7 +72,6 @@ export function loadConfig(): Config {
             minDelaySeconds: env.SIM_MIN_DELAY_SECONDS,
             maxDelaySeconds: env.SIM_MAX_DELAY_SECONDS,
             dailyCap: env.SIM_DAILY_CAP,
-            activeHoursUtc: parseActiveHours(env.SIM_ACTIVE_HOURS_UTC),
         },
         raidbots: {
             executor: env.RAIDBOTS_EXECUTOR,
@@ -94,19 +89,3 @@ export function loadConfig(): Config {
     };
 }
 
-function parseActiveHours(raw: string): ActiveHours {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-    const m = /^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(trimmed);
-    if (!m) {
-        throw new Error(
-            `SIM_ACTIVE_HOURS_UTC must be "HH-HH" (e.g. "03-10") or empty; got "${raw}"`,
-        );
-    }
-    const startHour = Number.parseInt(m[1]!, 10);
-    const endHour = Number.parseInt(m[2]!, 10);
-    if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 24) {
-        throw new Error(`SIM_ACTIVE_HOURS_UTC hours out of range: "${raw}"`);
-    }
-    return { startHour, endHour };
-}
