@@ -1,0 +1,167 @@
+# Waffledemon - Devourer - 2026-04-27 18:46 - US/Illidan
+# SimC Addon 12.0.5-01
+# WoW 12.0.5.67186, TOC 120005
+# Requires SimulationCraft 1000-01 or newer
+
+demonhunter="Waffledemon"
+level=90
+race=night_elf
+region=us
+server=illidan
+role=spell
+professions=alchemy=70/engineering=50
+spec=devourer
+# loot_spec=devourer
+
+talents=CgcBG5bbocFKcv+yIq8fPd6ORBA2MmZmZmZmxwMAAAAAAAegxsNYGAAAAAAAAmxMMzMzMzMzMDzsYGjFZhZmZmt2mZmBwwAQgZMYMD
+
+# Saved Loadout: M+ ANN
+# talents=CgcBG5bbocFKcv+yIq8fPd6ORBA2mxMzMzMzMGmBAAAAAAgxsNYGAAAAAAAAmxMMzMzMzMzMDzsYGjFswMzMzmlZmZAMMAAMjBjZA
+# Saved Loadout: raid voidbalde
+# talents=CgcBG5bbocFKcv+yIq8fPd6ORBA2MmZmZmZmxwMAAAAAAAegxsNYGAAAAAAAAmxMMmZmZMzMzYmFzYsw2GzMzMb2mZmBwwAAwMzgxMA
+# Saved Loadout: raid eradicate
+# talents=CgcBG5bbocFKcv+yIq8fPd6ORBA2MmZmZmZmxwMAAAAAAAegxsNYGAAAAAAAAmxMMzMzMzMzMDzsYGjFswMzMzmtZmZAMMAAMjBjZA
+
+# Devouring Reaver's Intake (276)
+head=,id=250033,enchant_id=8017,bonus_id=13334/6652/12667/12798/13338/13575/3161
+# Novice Combatant's Necklace (276)
+neck=,id=266314,gem_id=240983,bonus_id=13447/12798
+# Devouring Reaver's Exhaustplates (276)
+shoulder=,id=250031,enchant_id=8001,bonus_id=13334/13340/6652/13574/12798
+# Adherent's Silken Shroud (285)
+back=,id=239656,bonus_id=12214/12497/12066/8960/12384/8793/13622,crafted_stats=49/36,crafting_quality=5
+# Devouring Reaver's Engine (289)
+chest=,id=250036,enchant_id=7987,bonus_id=6652/13440/13336/13575/12806
+# Blue Workman's Shirt (1)
+shirt=,id=41253
+# Dream Wardens Tabard (1)
+tabard=,id=210501
+# Devouring Reaver's Support Straps (276)
+wrist=,id=250029,bonus_id=6652/13335/12667/12802/3161
+# Devouring Reaver's Essence Grips (289)
+hands=,id=250034,bonus_id=13335/13337/6652/13574/12806
+# Scorn-Scarred Shul'ka's Belt (276)
+waist=,id=249374,bonus_id=6652/12667/13577/13335/12802
+# Nightblade's Pantaloons (276)
+legs=,id=249312,enchant_id=7935,bonus_id=6652/13577/13334/12798
+# Devouring Reaver's Soul Flatteners (285)
+feet=,id=250035,enchant_id=7963,bonus_id=6652/13335/12805
+# Masterwork Sin'dorei Band (285)
+finger1=,id=240949,enchant_id=7967,gem_id=240900,bonus_id=12214/12497/12066/8793/13622,crafted_stats=49/36,crafting_quality=5
+# Bifurcation Band (276)
+finger2=,id=251115,enchant_id=7967,gem_id=240900,bonus_id=13440/6652/13668/12699/12798
+# Vaelgor's Final Stare (276)
+trinket1=,id=249346,bonus_id=6652/13334/12798
+# Gaze of the Alnseer (289)
+trinket2=,id=249343,bonus_id=6652/13335/12806
+# Spellbreaker's Warglaive (285)
+main_hand=,id=237840,enchant_id=8041,bonus_id=12214/12497/12066/12693/8960/8793/13622,crafted_stats=36/40,crafting_quality=5
+# Arcanic of the High Sage (289)
+off_hand=,id=258050,enchant_id=7983,bonus_id=13440/6652/12701/12806
+
+### Gear from Bags
+#
+# Nocturnal Thorncharm (263)
+# neck=,id=249626,gem_id=240983,bonus_id=41/13668/12790
+#
+# Barbed Ymirheim Choker (266)
+# neck=,id=50228,bonus_id=12795/13440/6652/13668/12699
+#
+# Barbed Ymirheim Choker (266)
+# neck=,id=50228,bonus_id=12795/13440/6652/13668/12699
+#
+# Amalgamation's Harness (253)
+# shoulder=,id=251164,bonus_id=12787/6652/13577/12699/11215
+#
+# Draconic Nullcape (279)
+# back=,id=249370,bonus_id=6652/13577/13335/12803
+#
+# Devouring Reaver's Essence Grips (276)
+# hands=,id=250034,bonus_id=6652/13440/13337/13574/12798
+#
+# Scorn-Scarred Shul'ka's Belt (266)
+# waist=,id=249374,bonus_id=6652/12667/13577/13334/12795
+#
+# Devouring Reaver's Pistons (276)
+# legs=,id=250032,enchant_id=8159,bonus_id=13334/6652/13339/13575/12798
+#
+# Verdant Tracker's Anklets (237)
+# feet=,id=256975,bonus_id=12778/42/13577
+#
+# Devouring Reaver's Soul Flatteners (276)
+# feet=,id=250035,enchant_id=7963,bonus_id=42/13440/12798
+#
+# Occlusion of Void (276)
+# finger1=,id=251217,enchant_id=7967,gem_id=240908,bonus_id=13440/6652/13668/12699/12798
+#
+# Band of the Triumvirate (266)
+# finger1=,id=151311,bonus_id=12795/13440/6652/13668/12699
+#
+# Platinum Star Band (276)
+# finger1=,id=193708,enchant_id=7967,gem_id=240908,bonus_id=13440/6652/13668/12699/12798
+#
+# Omission of Light (276)
+# finger1=,id=251093,enchant_id=7967,gem_id=240900,bonus_id=13440/6652/13668/12699/12798
+#
+# Tangle of Vibrant Vines (259)
+# trinket1=,id=252957,bonus_id=12793/6652
+#
+# Heart of Wind (276)
+# trinket1=,id=250256,bonus_id=13440/6652/12699/12798
+#
+# Locus-Walker's Ribbon (263)
+# trinket1=,id=249809,bonus_id=6652/13333/12790
+#
+# Ever-Collapsing Void Fissure (259)
+# trinket1=,id=251786,bonus_id=12793/6652
+#
+# Algeth'ar Puzzle Box (263)
+# trinket1=,id=193701,bonus_id=13439/6652/12699/12790
+#
+# Crucible of Erratic Energies (263)
+# trinket1=,id=264507,bonus_id=12790
+#
+# Emberwing Feather (276)
+# trinket1=,id=250144,bonus_id=13440/41/12699/12798
+#
+# Sylvan Wakrapuku (250)
+# trinket1=,id=251784,bonus_id=12786/6652
+#
+# Eye of the Drowning Void (266)
+# trinket1=,id=250257,bonus_id=12795/13440/6652/12699
+#
+# Solarflare Prism (263)
+# trinket1=,id=252420,bonus_id=13439/42/12699/12790
+#
+# Krick's Beetle Stabber (253)
+# main_hand=,id=49807,bonus_id=12787/6652/12701/11215
+#
+# Tormentor's Bladed Fists (237)
+# main_hand=,id=249298,bonus_id=43/13332/12778/11215
+#
+# Lightless Lament (243)
+# main_hand=,id=260408,bonus_id=43/13332/12780
+#
+# Resolute Runeglaive (266)
+# main_hand=,id=251106,bonus_id=12795/13440/6652/12701
+#
+# Mystakria's Harvester (266)
+# main_hand=,id=193717,bonus_id=12795/13440/6652/12701
+#
+# Blade of the Blind Verdict (276)
+# main_hand=,id=249294,enchant_id=7983,bonus_id=40/13334/12798
+#
+# Emblazoned Sunglaive (276)
+# main_hand=,id=249280,enchant_id=8039,bonus_id=6652/13334/12798
+
+### Additional Character Info
+#
+# catalyst_currencies=3269:8/3378:7/2813:8/3116:8
+#
+# upgrade_currencies=c:3383:610/c:1813:1745/c:3341:720/c:3343:420/c:1792:2723/c:2122:13/c:3345:120/i:230935:2/i:228339:1/i:224072:1/i:239146:2/i:232875:3/i:230936:1/i:231769:1
+#
+# slot_high_watermarks=0:276:276/1:276:276/2:276:276/3:289:289/4:276:276/5:276:276/6:285:285/7:276:276/8:289:289/9:276:276/10:276:276/11:285:285/12:0:124/13:10:180/14:289:289/15:285:285/16:250:250
+#
+# upgrade_achievements=19326/19397/19398/19577/19578/19579/40107/40115/40118/40939/40942/40943/40944/40945/41886/41887/41888/41892/42767/42768/42769/61809
+
+# Checksum: c3e0c978

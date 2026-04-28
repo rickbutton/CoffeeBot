@@ -1,0 +1,57 @@
+{
+    "name": "coffeebot",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Discord bot that collects WoW SimulationCraft exports, runs Raidbots droptimizer sims on a weekly cadence, and publishes the results to a managed status channel.",
+    "type": "module",
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "start": "node --enable-source-maps dist/index.js",
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "test:coverage:open": "vitest run --coverage && start coverage/index.html",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "tsx src/db/migrate.ts",
+        "sim:test-once": "tsx src/raidbots/test-sim.ts",
+        "lint": "eslint src",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "dependencies": {
+        "better-sqlite3": "^12.9.0",
+        "cron": "^4.4.0",
+        "discord.js": "^14.26.3",
+        "dotenv": "^17.4.2",
+        "drizzle-orm": "^0.45.2",
+        "pino": "^10.3.1",
+        "pino-pretty": "^13.1.3",
+        "playwright": "^1.59.1",
+        "zod": "^4.3.6"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/node": "^25.6.0",
+        "@vitest/coverage-v8": "^4.1.5",
+        "drizzle-kit": "^0.31.10",
+        "eslint": "^10.2.1",
+        "eslint-config-prettier": "^10.1.8",
+        "prettier": "^3.8.3",
+        "tsx": "^4.21.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.59.1",
+        "vitest": "^4.1.5"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "better-sqlite3",
+            "esbuild"
+        ]
+    }
+}

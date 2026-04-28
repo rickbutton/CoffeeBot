@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+drizzle
+coverage
+.playwright-mcp
+*.example
+*.lockb
+pnpm-lock.yaml

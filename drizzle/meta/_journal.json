@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1777329946326,
+      "tag": "0000_milky_valeria_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777341239291,
+      "tag": "0001_silky_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777343145619,
+      "tag": "0002_loud_rafael_vega",
+      "breakpoints": true
+    }
+  ]
+}
