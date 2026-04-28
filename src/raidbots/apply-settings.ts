@@ -39,10 +39,16 @@ async function ensureSimulationOptionsOpen(page: Page): Promise<void> {
     }
 }
 
+// Source/difficulty run before the page has fully hydrated React + fetched the source list.
+// On a cold-start Fly machine (shared-cpu-1x), that hydration can take 15-20s on top of
+// page.goto's "domcontentloaded" return. 30s gives slow VMs enough headroom while still
+// failing fast if the page is genuinely broken.
+const COLD_START_TIMEOUT_MS = 30_000;
+
 async function selectSource(page: Page, source: string): Promise<void> {
     const label = page.locator(`p.Text:text-is("${source}")`).first();
     try {
-        await label.waitFor({ state: "visible", timeout: 10_000 });
+        await label.waitFor({ state: "visible", timeout: COLD_START_TIMEOUT_MS });
         await label.click();
         log.info({ source }, "raidbots: selected source");
     } catch (err) {
@@ -58,7 +64,7 @@ async function selectDifficulty(page: Page, difficulty: SimSettings["difficulty"
         .filter({ has: page.locator(`p.Text:text-is("${label}")`) })
         .first();
     try {
-        await box.waitFor({ state: "visible", timeout: 10_000 });
+        await box.waitFor({ state: "visible", timeout: COLD_START_TIMEOUT_MS });
         await box.click();
         log.info({ difficulty }, "raidbots: selected difficulty");
     } catch (err) {
