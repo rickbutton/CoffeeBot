@@ -42,7 +42,7 @@ describe("registerInteractionHandler", () => {
     it("ignores non-chat-input interactions", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerInteractionHandler(client, db, makeWorker(), new Set(), 7, () => {});
+        registerInteractionHandler(client, db, makeWorker(), new Set(), 7, () => {}, null);
         const trigger = vi.fn();
         const i = { isChatInputCommand: () => false };
         (client as unknown as EventEmitter).emit("interactionCreate", i);
@@ -54,7 +54,7 @@ describe("registerInteractionHandler", () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {});
+        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {}, null);
         const i = makeInteraction({ commandName: "help", channelId: "other" });
         (client as unknown as EventEmitter).emit("interactionCreate", i);
         await flush();
@@ -67,7 +67,7 @@ describe("registerInteractionHandler", () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan1", "msg");
         const client = new EventEmitter() as never;
-        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {});
+        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {}, null);
         const i = makeInteraction({
             commandName: "status",
             sub: "setup",
@@ -93,6 +93,7 @@ describe("registerInteractionHandler", () => {
             new Set(["admin"]),
             7,
             () => {},
+            null,
         );
         const i = makeInteraction({ commandName: "help", userId: "admin" });
         (client as unknown as EventEmitter).emit("interactionCreate", i);
@@ -104,7 +105,7 @@ describe("registerInteractionHandler", () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, trigger);
+        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, trigger, null);
 
         const sim = makeInteraction({ commandName: "sim", sub: "status" });
         (client as unknown as EventEmitter).emit("interactionCreate", sim);
@@ -125,7 +126,7 @@ describe("registerInteractionHandler", () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
         const trigger = vi.fn();
-        registerInteractionHandler(client, db, makeWorker(), new Set(), 7, trigger);
+        registerInteractionHandler(client, db, makeWorker(), new Set(), 7, trigger, null);
         const i = makeInteraction({ commandName: "characters", sub: "list" });
         (client as unknown as EventEmitter).emit("interactionCreate", i);
         await flush();
@@ -135,7 +136,7 @@ describe("registerInteractionHandler", () => {
     it("catches errors thrown in the dispatched handler and replies", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {});
+        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {}, null);
         const i = makeInteraction({ commandName: "characters", sub: "list" });
         // Make options.getSubcommand throw.
         i.options.getSubcommand = () => {
@@ -151,7 +152,7 @@ describe("registerInteractionHandler", () => {
     it("uses followUp when the interaction was already deferred", async () => {
         const db = makeTestDb();
         const client = new EventEmitter() as never;
-        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {});
+        registerInteractionHandler(client, db, makeWorker(), new Set(["admin"]), 7, () => {}, null);
         const i = makeInteraction({ commandName: "characters", sub: "list", deferred: true });
         i.options.getSubcommand = () => {
             throw new Error("boom");

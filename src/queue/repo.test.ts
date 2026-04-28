@@ -12,6 +12,7 @@ import {
     jobsCountedTowardCap,
     markDone,
     markFailed,
+    markWowauditUploaded,
     queueStatus,
     requeueStuckRunning,
 } from "./repo.js";
@@ -194,6 +195,30 @@ describe("claimNextJob / markDone / markFailed", () => {
         const row2 = db.select().from(simJobs).where(eq(simJobs.id, second!.id)).get();
         expect(row2?.status).toBe("failed");
         expect(row2?.error).toBe("boom");
+    });
+});
+
+describe("markWowauditUploaded", () => {
+    it("stamps wowauditUploadedAt on the given job", () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample(), "raw");
+        const { jobIds } = enqueueForOwner(db, "u1");
+        markDone(db, jobIds[0]!, "https://x/r/abc");
+        const when = new Date("2026-04-28T12:00:00Z");
+        markWowauditUploaded(db, jobIds[0]!, when);
+        const row = db.select().from(simJobs).where(eq(simJobs.id, jobIds[0]!)).get();
+        expect(row?.wowauditUploadedAt?.toISOString()).toBe(when.toISOString());
+    });
+
+    it("uses now() when no timestamp is given", () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample(), "raw");
+        const { jobIds } = enqueueForOwner(db, "u1");
+        markDone(db, jobIds[0]!, "u");
+        const before = Date.now();
+        markWowauditUploaded(db, jobIds[0]!);
+        const row = db.select().from(simJobs).where(eq(simJobs.id, jobIds[0]!)).get();
+        expect(row?.wowauditUploadedAt?.getTime()).toBeGreaterThanOrEqual(before - 1000);
     });
 });
 

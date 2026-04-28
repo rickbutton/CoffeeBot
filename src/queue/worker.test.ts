@@ -48,6 +48,56 @@ describe("startWorker", () => {
         }
     });
 
+    it("invokes onJobDone with the report URL after a successful job", async () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample(), "raw");
+        const { jobIds } = enqueueForOwner(db, "u1");
+
+        const executor: Executor = async () => ({
+            ok: true,
+            reportUrl: "https://www.raidbots.com/simbot/report/RID42",
+        });
+
+        const calls: { jobId: number; reportUrl: string }[] = [];
+        const w = startWorker(db, FAST_CFG, executor, {
+            onJobDone: async ({ jobId, reportUrl }) => {
+                calls.push({ jobId, reportUrl });
+            },
+        });
+        try {
+            await waitFor(() => calls.length > 0);
+            expect(calls[0]!.jobId).toBe(jobIds[0]);
+            expect(calls[0]!.reportUrl).toContain("RID42");
+        } finally {
+            await w.stop();
+        }
+    });
+
+    it("logs but does not crash when onJobDone throws", async () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample(), "raw");
+        const { jobIds } = enqueueForOwner(db, "u1");
+
+        const executor: Executor = async () => ({
+            ok: true,
+            reportUrl: "https://www.raidbots.com/simbot/report/x",
+        });
+
+        const w = startWorker(db, FAST_CFG, executor, {
+            onJobDone: async () => {
+                throw new Error("upload exploded");
+            },
+        });
+        try {
+            await waitFor(() => {
+                const row = db.select().from(simJobs).where(eq(simJobs.id, jobIds[0]!)).get();
+                return row?.status === "done";
+            });
+        } finally {
+            await w.stop();
+        }
+    });
+
     it("requeues stuck running jobs on startup", async () => {
         const db = makeTestDb();
         const c = upsertCharacter(db, "u1", sample(), "raw");

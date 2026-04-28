@@ -6,6 +6,7 @@ import {
     deleteBotState,
     deleteCharacter,
     getBotState,
+    getCharacterById,
     latestJobsByCharacter,
     listAllCharacters,
     listCharacters,
@@ -131,6 +132,16 @@ describe("listStaleCharacters / markCharactersRequested", () => {
         markCharactersRequested(db, [fresh.id]);
         const stale2 = listStaleCharacters(db);
         expect(stale2.some((c) => c.id === fresh.id)).toBe(true);
+    });
+});
+
+describe("getCharacterById", () => {
+    it("returns the character when present and null otherwise", () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sampleParsed(), "raw");
+        const found = getCharacterById(db, c.id);
+        expect(found?.name).toBe("Bowzo");
+        expect(getCharacterById(db, 9999)).toBe(null);
     });
 });
 

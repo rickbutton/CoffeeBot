@@ -165,6 +165,10 @@ export function markCharactersRequested(db: Db, ids: number[]): void {
         .run();
 }
 
+export function getCharacterById(db: Db, id: number): Character | null {
+    return db.select().from(characters).where(eq(characters.id, id)).get() ?? null;
+}
+
 export function latestJobsByCharacter(db: Db): Map<number, SimJob> {
     const rows = db
         .select()

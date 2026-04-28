@@ -30,6 +30,11 @@ export type WorkerHandle = {
 export type WorkerCallbacks = {
     notify?: (message: string) => Promise<void>;
     onJobChange?: () => void;
+    /**
+     * Fired after a job is marked done with a report URL. Used by wowaudit upload.
+     * Errors are caught and logged here; they don't fail the sim itself.
+     */
+    onJobDone?: (input: { jobId: number; characterId: number; reportUrl: string }) => Promise<void>;
 };
 
 const IDLE_POLL_MS = 30_000;
@@ -39,7 +44,11 @@ export function startWorker(
     db: Db,
     cfg: PacingConfig,
     executor: Executor,
-    { notify = async () => {}, onJobChange = () => {} }: WorkerCallbacks = {},
+    {
+        notify = async () => {},
+        onJobChange = () => {},
+        onJobDone = async () => {},
+    }: WorkerCallbacks = {},
 ): WorkerHandle {
     let paused = false;
     let stopped = false;
@@ -106,6 +115,15 @@ export function startWorker(
                     markDone(db, job.id, result.reportUrl);
                     log.info({ jobId: job.id, url: result.reportUrl }, "job done");
                     consecutiveFailures = 0;
+                    try {
+                        await onJobDone({
+                            jobId: job.id,
+                            characterId: job.characterId,
+                            reportUrl: result.reportUrl,
+                        });
+                    } catch (err) {
+                        log.error({ err, jobId: job.id }, "onJobDone hook threw");
+                    }
                 } else {
                     markFailed(db, job.id, result.error);
                     log.warn({ jobId: job.id, error: result.error }, "job failed");

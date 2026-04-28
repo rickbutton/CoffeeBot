@@ -44,6 +44,7 @@ const HELP_BODY = [
     "• `/sim pause` / `/sim resume` — halt or restart the worker",
     "• `/sim cancel id:<n>` — cancel a queued job",
     "• `/sim request-simcs [mode:all|stale]` — DM each player asking for a refresh",
+    "• `/sim backfill-wowaudit` — POST any older `done` sims to wowaudit (one-shot)",
     "",
     "__Status channel__",
     "• `/status setup channel:#x` — designate the status channel and post the roster message",

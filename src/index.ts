@@ -11,11 +11,13 @@ import { requestSimcs } from "./bot/request-simcs.js";
 import { makeStatusUpdater, updateStatusMessage } from "./bot/status-message.js";
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/client.js";
-import { listKnownDiscordIds } from "./db/repo.js";
+import { getCharacterById, listKnownDiscordIds } from "./db/repo.js";
+import { markWowauditUploaded } from "./queue/repo.js";
 import { startWorker, stubExecutor, type Executor } from "./queue/worker.js";
 import { makeRaidbotsExecutor } from "./raidbots/executor.js";
 import { RaidbotsSession } from "./raidbots/session.js";
 import { log } from "./util/log.js";
+import { makeUploader } from "./wowaudit/upload.js";
 
 async function main(): Promise<void> {
     const config = loadConfig();
@@ -42,9 +44,28 @@ async function main(): Promise<void> {
 
     const client = createClient();
     const triggerStatusUpdate = makeStatusUpdater(client, db, config.requestSimcs.staleDays);
+    const wowauditUploader = config.wowaudit ? makeUploader(config.wowaudit) : null;
+    if (wowauditUploader) {
+        log.info({ baseUrl: config.wowaudit!.baseUrl }, "wowaudit upload enabled");
+    }
     const worker = startWorker(db, config.sim, executor, {
         notify: (msg) => notifyAdmins(client, config.adminUserIds, msg),
         onJobChange: triggerStatusUpdate,
+        onJobDone: wowauditUploader
+            ? async ({ jobId, characterId, reportUrl }) => {
+                  const character = getCharacterById(db, characterId);
+                  if (!character) {
+                      log.warn({ jobId, characterId }, "wowaudit: character not found; skipping");
+                      return;
+                  }
+                  const result = await wowauditUploader({
+                      jobId,
+                      reportUrl,
+                      characterName: character.name,
+                  });
+                  if (result.uploaded) markWowauditUploaded(db, jobId);
+              }
+            : undefined,
     });
 
     registerDmHandler(client, db, triggerStatusUpdate, worker.poke);
@@ -56,6 +77,7 @@ async function main(): Promise<void> {
         config.adminUserIds,
         config.requestSimcs.staleDays,
         triggerStatusUpdate,
+        wowauditUploader,
     );
 
     const cronJob = config.requestSimcs.cron

@@ -1,6 +1,7 @@
 import { type Client, MessageFlags } from "discord.js";
 import type { Db } from "../../db/client.js";
 import type { WorkerHandle } from "../../queue/worker.js";
+import type { Uploader } from "../../wowaudit/upload.js";
 import { handleCharactersCommand } from "../commands/characters.js";
 import { handleHelpCommand } from "../commands/help.js";
 import { handleSimCommand } from "../commands/sim.js";
@@ -15,6 +16,7 @@ export function registerInteractionHandler(
     adminUserIds: Set<string>,
     staleDays: number,
     triggerStatusUpdate: () => void,
+    uploader: Uploader | null,
 ): void {
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isChatInputCommand()) return;
@@ -43,7 +45,14 @@ export function registerInteractionHandler(
                     triggerStatusUpdate();
                     return;
                 case "sim":
-                    await handleSimCommand(interaction, db, worker, adminUserIds, staleDays);
+                    await handleSimCommand(
+                        interaction,
+                        db,
+                        worker,
+                        adminUserIds,
+                        staleDays,
+                        uploader,
+                    );
                     triggerStatusUpdate();
                     return;
                 case "status":

@@ -8,6 +8,8 @@ import type { Db } from "../../db/client.js";
 import { utcDayStart } from "../../queue/pacing.js";
 import { cancelJob, enqueueAll, enqueueForOwner, queueStatus } from "../../queue/repo.js";
 import type { WorkerHandle } from "../../queue/worker.js";
+import { backfillWowaudit } from "../../wowaudit/backfill.js";
+import type { Uploader } from "../../wowaudit/upload.js";
 import { requestSimcs, type RequestMode } from "../request-simcs.js";
 
 const EPHEMERAL = MessageFlags.Ephemeral;
@@ -40,6 +42,11 @@ export const simCommand = new SlashCommandBuilder()
     )
     .addSubcommand((s) =>
         s
+            .setName("backfill-wowaudit")
+            .setDescription("Upload past sim reports to wowaudit (one-shot)."),
+    )
+    .addSubcommand((s) =>
+        s
             .setName("request-simcs")
             .setDescription("DM each player asking them to refresh their simcs.")
             .addStringOption((o) =>
@@ -60,6 +67,7 @@ export async function handleSimCommand(
     worker: WorkerHandle,
     adminUserIds: Set<string>,
     staleDays: number,
+    uploader: Uploader | null,
 ): Promise<void> {
     if (!adminUserIds.has(interaction.user.id)) {
         await interaction.reply({ content: ":no_entry: Admin only.", flags: EPHEMERAL });
@@ -106,7 +114,8 @@ export async function handleSimCommand(
                 : status.recent.map((j) => {
                       const url = j.reportUrl ? ` <${j.reportUrl}>` : "";
                       const err = j.error ? ` — ${j.error.slice(0, 80)}` : "";
-                      return `\`#${j.id}\` char ${j.characterId} · **${j.status}**${url}${err}`;
+                      const wowaudit = j.wowauditUploadedAt ? " · :outbox_tray:" : "";
+                      return `\`#${j.id}\` char ${j.characterId} · **${j.status}**${url}${wowaudit}${err}`;
                   })),
         ];
         await interaction.reply({
@@ -141,6 +150,27 @@ export async function handleSimCommand(
                 ? `:wastebasket: Cancelled job \`#${id}\`.`
                 : `:question: Job \`#${id}\` isn't queued (already running, done, or doesn't exist).`,
             flags: EPHEMERAL,
+        });
+        return;
+    }
+
+    if (sub === "backfill-wowaudit") {
+        if (!uploader) {
+            await interaction.reply({
+                content:
+                    ":x: Wowaudit upload isn't configured. Set `WOWAUDIT_API_KEY` and restart.",
+                flags: EPHEMERAL,
+            });
+            return;
+        }
+        await interaction.deferReply({ flags: EPHEMERAL });
+        const r = await backfillWowaudit(db, uploader);
+        const total = r.uploaded + r.failed + r.skipped;
+        await interaction.editReply({
+            content:
+                total === 0
+                    ? ":outbox_tray: Nothing to backfill — all done sims are already uploaded."
+                    : `:outbox_tray: Backfilled to wowaudit — uploaded **${r.uploaded}**, failed **${r.failed}**, skipped **${r.skipped}**.`,
         });
         return;
     }

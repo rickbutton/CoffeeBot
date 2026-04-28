@@ -150,6 +150,10 @@ export function markDone(db: Db, jobId: number, reportUrl: string): void {
         .run();
 }
 
+export function markWowauditUploaded(db: Db, jobId: number, when: Date = new Date()): void {
+    db.update(simJobs).set({ wowauditUploadedAt: when }).where(eq(simJobs.id, jobId)).run();
+}
+
 export function markFailed(db: Db, jobId: number, error: string): void {
     db.update(simJobs)
         .set({ status: "failed", error, completedAt: new Date() })

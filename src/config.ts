@@ -21,6 +21,9 @@ const Schema = z.object({
 
     REQUEST_SIMCS_CRON: z.string().default(""),
     REQUEST_SIMCS_STALE_DAYS: z.coerce.number().int().min(1).default(7),
+
+    WOWAUDIT_API_KEY: z.string().optional(),
+    WOWAUDIT_BASE_URL: z.string().default("https://wowaudit.com/api"),
 });
 
 export type Config = {
@@ -44,6 +47,7 @@ export type Config = {
         cron: string | null;
         staleDays: number;
     };
+    wowaudit: { apiKey: string; baseUrl: string } | null;
 };
 
 export function loadConfig(): Config {
@@ -86,6 +90,9 @@ export function loadConfig(): Config {
             cron: env.REQUEST_SIMCS_CRON.trim() || null,
             staleDays: env.REQUEST_SIMCS_STALE_DAYS,
         },
+        wowaudit: env.WOWAUDIT_API_KEY
+            ? { apiKey: env.WOWAUDIT_API_KEY, baseUrl: env.WOWAUDIT_BASE_URL }
+            : null,
     };
 }
 
