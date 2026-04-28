@@ -20,6 +20,7 @@
         "db:migrate": "tsx src/db/migrate.ts",
         "sim:test-once": "tsx src/raidbots/test-sim.ts",
         "qelive:test-once": "tsx src/qelive/test-sim.ts",
+        "wowutils:script": "tsx src/wowutils/generate-script.ts",
         "lint": "eslint src",
         "format": "prettier --write .",
         "format:check": "prettier --check ."

@@ -19,6 +19,7 @@ The bot owns one message in that channel and keeps it in lock-step with the data
 - **QELive automation for healers** (Playwright, separate persistent profile under `QELIVE_USER_DATA_DIR`) — same queue dispatches healer specs to QELive's Upgrade Finder (Mythic-Max, upgrade-all + upgrade-vault toggled on). Behind the same `RAIDBOTS_EXECUTOR=playwright` flag — when on, [src/queue/dispatch.ts](src/queue/dispatch.ts) routes healer jobs to [src/qelive/](src/qelive/) and everyone else to Raidbots.
 - **Reminders** — `/sim request-simcs [mode:all|stale]` DMs each player asking for a refresh; optional cron schedule via `REQUEST_SIMCS_CRON`. DM points at the status channel; DMing the bot directly still works as a fallback.
 - **wowaudit upload** — every successful sim (Raidbots **or** QELive) is POSTed to wowaudit's `/v1/wishlists` endpoint (`replace_manual_edits=true`, `clear_conduits=true`) and the job row is stamped with `wowaudit_uploaded_at`. Enabled when `WOWAUDIT_API_KEY` is set; the API key alone identifies the team. Upload failures are logged but never fail the sim itself. Reports that pre-date the upload feature can be flushed with `/sim backfill-wowaudit` (one-shot, sequential, idempotent — already-uploaded jobs are skipped).
+- **wowutils paste-script generator** — `pnpm wowutils:script` builds a self-contained browser-console snippet that uploads the latest report per character into [wowutils.com](https://wowutils.com). wowutils has no API yet and uses Battle.net SSO, so this is a manual paste-into-devtools step (you sign in once, paste the script, watch it iterate the roster with human-speed jitter). For characters with multiple specs simmed, the CLI prompts which spec to upload and persists the choice to `data/wowutils-spec-preferences.json` for next time.
 - **Slash commands** auto-register on every boot.
 
 **Remaining**
@@ -50,6 +51,7 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | `pnpm db:generate` / `pnpm db:migrate` | Drizzle migrations |
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |
 | `pnpm qelive:test-once <simc-file>` | Run one QELive Upgrade Finder pass for a healer simc |
+| `pnpm wowutils:script` | Generate the wowutils paste-into-console upload snippet at `data/wowutils-script.js` (interactive when any character has >1 spec simmed) |
 
 For a one-off Raidbots dry-run with the browser visible:
 ```bash
