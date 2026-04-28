@@ -35,6 +35,7 @@ const HELP_BODY = [
     "__Roster__",
     "• `/characters register user:@x name:... realm:... region:... class:... specs:...` — pre-register a character with one row per spec",
     "• `/characters list [user:@x]` — list characters",
+    "• `/characters simc id:<n>` — fetch the stored simc string for a character (admin only)",
     "• `/characters delete id:<n>` — remove a character row",
     "",
     "__Sim queue__",

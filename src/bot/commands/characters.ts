@@ -1,11 +1,17 @@
 import {
+    AttachmentBuilder,
     type ChatInputCommandInteraction,
     InteractionContextType,
     MessageFlags,
     SlashCommandBuilder,
 } from "discord.js";
 import type { Db } from "../../db/client.js";
-import { addCharacterRoster, deleteCharacter, listCharacters } from "../../db/repo.js";
+import {
+    addCharacterRoster,
+    deleteCharacter,
+    getCharacterById,
+    listCharacters,
+} from "../../db/repo.js";
 import { WOW_CLASSES, WOW_REGIONS } from "../../parser/simc.js";
 
 const EPHEMERAL = MessageFlags.Ephemeral;
@@ -29,6 +35,17 @@ export const charactersCommand = new SlashCommandBuilder()
         s
             .setName("delete")
             .setDescription("Delete one of your stored characters by id.")
+            .addIntegerOption((o) =>
+                o
+                    .setName("id")
+                    .setDescription("Character id (from /characters list)")
+                    .setRequired(true),
+            ),
+    )
+    .addSubcommand((s) =>
+        s
+            .setName("simc")
+            .setDescription("Fetch the stored simc string for a character (admin only).")
             .addIntegerOption((o) =>
                 o
                     .setName("id")
@@ -84,7 +101,43 @@ export async function handleCharactersCommand(
 
     if (sub === "list") return handleList(interaction, db, adminUserIds);
     if (sub === "delete") return handleDelete(interaction, db);
+    if (sub === "simc") return handleSimc(interaction, db, adminUserIds);
     if (sub === "register") return handleRegister(interaction, db, adminUserIds);
+}
+
+async function handleSimc(
+    interaction: ChatInputCommandInteraction,
+    db: Db,
+    adminUserIds: Set<string>,
+): Promise<void> {
+    if (!adminUserIds.has(interaction.user.id)) {
+        await interaction.reply({ content: ":no_entry: Admin only.", flags: EPHEMERAL });
+        return;
+    }
+    const id = interaction.options.getInteger("id", true);
+    const c = getCharacterById(db, id);
+    if (!c) {
+        await interaction.reply({
+            content: `:question: No character \`#${id}\` exists.`,
+            flags: EPHEMERAL,
+        });
+        return;
+    }
+    if (c.simc === null) {
+        await interaction.reply({
+            content: `:warning: \`#${id}\` **${c.name}** *(${c.spec ?? "?"})* has no simc submitted yet.`,
+            flags: EPHEMERAL,
+        });
+        return;
+    }
+    const filename = `${c.name}-${c.spec ?? "nospec"}.simc`.replace(/[^A-Za-z0-9._-]/g, "_");
+    const attachment = new AttachmentBuilder(Buffer.from(c.simc, "utf8"), { name: filename });
+    await interaction.reply({
+        content: `:scroll: Stored simc for **${c.name}** *(${c.spec ?? "?"})* on ${c.realm}-${c.region.toUpperCase()} (owner <@${c.discordId}>) — updated <t:${Math.floor(c.updatedAt.getTime() / 1000)}:R>.`,
+        files: [attachment],
+        flags: EPHEMERAL,
+        allowedMentions: { parse: [] },
+    });
 }
 
 async function handleList(

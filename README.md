@@ -45,7 +45,7 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | | |
 |---|---|
 | `pnpm dev` / `pnpm start` | Run the bot (watch / built) |
-| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (214 tests, ~98% line coverage) |
+| `pnpm test` / `pnpm test:coverage` | Unit tests + coverage report under `coverage/` (218 tests, ~98% line coverage) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm format` | TS check (covers source **and** tests via [tsconfig.test.json](tsconfig.test.json)), ESLint, Prettier |
 | `pnpm db:generate` / `pnpm db:migrate` | Drizzle migrations |
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |

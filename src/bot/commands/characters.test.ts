@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
-import { upsertCharacter } from "../../db/repo.js";
+import { addCharacterRoster, upsertCharacter } from "../../db/repo.js";
 import { handleCharactersCommand } from "./characters.js";
 import { asyncMock, sampleCharacter as sample } from "../../test-utils/factories.js";
 
@@ -94,6 +94,58 @@ describe("handleCharactersCommand: delete", () => {
         await handleCharactersCommand(i as never, db, new Set());
         const r = i.reply.mock.calls[0]![0] as { content: string };
         expect(r.content).toMatch(/No character/);
+    });
+});
+
+describe("handleCharactersCommand: simc", () => {
+    it("rejects non-admins", async () => {
+        const db = makeTestDb();
+        const i = makeInteraction({ sub: "simc", userId: "u1", options: { id: 1 } });
+        await handleCharactersCommand(i as never, db, new Set(["admin"]));
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/Admin only/);
+    });
+
+    it("returns not-found for an unknown id", async () => {
+        const db = makeTestDb();
+        const i = makeInteraction({ sub: "simc", userId: "admin", options: { id: 9999 } });
+        await handleCharactersCommand(i as never, db, new Set(["admin"]));
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/No character/);
+    });
+
+    it("warns when the character has no simc submitted yet", async () => {
+        const db = makeTestDb();
+        addCharacterRoster(db, {
+            discordId: "u1",
+            name: "Bowzo",
+            realm: "area-52",
+            region: "us",
+            className: "hunter",
+            specs: ["beast_mastery"],
+        });
+        // Find the just-registered row id.
+        const list = (await import("../../db/repo.js")).listCharacters(db, "u1");
+        const id = list[0]!.id;
+        const i = makeInteraction({ sub: "simc", userId: "admin", options: { id } });
+        await handleCharactersCommand(i as never, db, new Set(["admin"]));
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/no simc submitted yet/);
+    });
+
+    it("attaches the stored simc as a .simc file", async () => {
+        const db = makeTestDb();
+        const c = upsertCharacter(db, "u1", sample(), "raw-simc-string");
+        const i = makeInteraction({ sub: "simc", userId: "admin", options: { id: c.id } });
+        await handleCharactersCommand(i as never, db, new Set(["admin"]));
+        const reply = i.reply.mock.calls[0]![0] as {
+            content: string;
+            files: { name: string; attachment: Buffer }[];
+        };
+        expect(reply.content).toMatch(/Stored simc for/);
+        expect(reply.files).toHaveLength(1);
+        expect(reply.files[0]!.name).toBe("Bowzo-beast_mastery.simc");
+        expect(reply.files[0]!.attachment.toString("utf8")).toBe("raw-simc-string");
     });
 });
 
