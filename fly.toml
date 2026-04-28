@@ -19,8 +19,8 @@ primary_region = "ord"
   destination = "/data"
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "1gb"
+  size = "performance-1x"
+  memory = "2gb"
 
 [deploy]
   strategy = "immediate"
