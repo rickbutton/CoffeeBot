@@ -1,0 +1,24 @@
+app = "coffeebot"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DB_PATH = "/data/bot.db"
+  PLAYWRIGHT_USER_DATA_DIR = "/data/chromium-profile"
+  QELIVE_USER_DATA_DIR = "/data/qelive-profile"
+  PLAYWRIGHT_HEADLESS = "true"
+  RAIDBOTS_EXECUTOR = "playwright"
+  LOG_LEVEL = "info"
+
+[mounts]
+  source = "coffeebot_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[deploy]
+  strategy = "immediate"

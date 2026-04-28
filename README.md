@@ -52,6 +52,8 @@ Then in your server: `/status setup channel:#droptimizer` (the bot needs View / 
 | `pnpm sim:test-once <simc-file>` | Run one Raidbots sim end-to-end without going through the bot |
 | `pnpm qelive:test-once <simc-file>` | Run one QELive Upgrade Finder pass for a healer simc |
 | `pnpm wowutils:script` | Generate the wowutils paste-into-console upload snippet at `data/wowutils-script.js` (interactive when any character has >1 spec simmed) |
+| `pnpm docker:build` / `pnpm docker:run` / `pnpm docker:logs` / `pnpm docker:stop` | Local Docker workflow — build the image, run it detached against `./data` (mounted to `/data` in-container), tail logs, stop |
+| `pnpm fly:deploy` / `pnpm fly:start` / `pnpm fly:stop` / `pnpm fly:logs` / `pnpm fly:status` / `pnpm fly:ssh` | Fly.io deploy + machine lifecycle. `fly:start`/`fly:stop` operate on the single app machine (no ID needed unless there's >1) |
 
 For a one-off Raidbots dry-run with the browser visible:
 ```bash
