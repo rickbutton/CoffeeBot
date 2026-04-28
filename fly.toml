@@ -24,3 +24,4 @@ primary_region = "ord"
 
 [deploy]
   strategy = "immediate"
+  max_unavailable = 1
