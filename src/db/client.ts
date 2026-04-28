@@ -15,3 +15,7 @@ export function openDb(path: string) {
     sqlite.pragma("foreign_keys = ON");
     return drizzle(sqlite, { schema });
 }
+
+export function closeDb(db: Db): void {
+    (db as unknown as { $client: Database.Database }).$client.close();
+}

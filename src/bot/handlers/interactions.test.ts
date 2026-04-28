@@ -3,17 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { setStatusChannel } from "../status-message.js";
 import { registerInteractionHandler } from "./interactions.js";
-import type { WorkerHandle } from "../../queue/worker.js";
-
-function makeWorker(): WorkerHandle {
-    return {
-        pause: vi.fn(),
-        resume: vi.fn(),
-        isPaused: () => false,
-        poke: vi.fn(),
-        stop: async () => {},
-    };
-}
+import {
+    asyncMock,
+    flushMicrotasks as flush,
+    makeWorker,
+} from "../../test-utils/factories.js";
 
 function makeInteraction(opts: {
     commandName: string;
@@ -23,8 +17,8 @@ function makeInteraction(opts: {
     deferred?: boolean;
     replied?: boolean;
 }) {
-    const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
-    const followUp = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+    const reply = asyncMock();
+    const followUp = asyncMock();
     return {
         isChatInputCommand: () => true,
         commandName: opts.commandName,
@@ -42,11 +36,6 @@ function makeInteraction(opts: {
         reply,
         followUp,
     };
-}
-
-async function flush(): Promise<void> {
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
 }
 
 describe("registerInteractionHandler", () => {

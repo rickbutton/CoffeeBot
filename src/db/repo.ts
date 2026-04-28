@@ -103,12 +103,12 @@ export function addCharacterRoster(
     db: Db,
     entry: RosterEntry,
 ): { inserted: number; alreadyExisted: number } {
+    if (entry.specs.length === 0) return { inserted: 0, alreadyExisted: 0 };
     ensureUser(db, entry.discordId);
-    let inserted = 0;
-    let alreadyExisted = 0;
-    for (const spec of entry.specs) {
-        const existing = db
-            .select({ id: characters.id })
+
+    const existingSpecs = new Set(
+        db
+            .select({ spec: characters.spec })
             .from(characters)
             .where(
                 and(
@@ -116,27 +116,29 @@ export function addCharacterRoster(
                     eq(characters.region, entry.region),
                     eq(characters.realm, entry.realm),
                     eq(characters.name, entry.name),
-                    eq(characters.spec, spec),
+                    inArray(characters.spec, entry.specs),
                 ),
             )
-            .get();
-        if (existing) {
-            alreadyExisted++;
-            continue;
-        }
+            .all()
+            .map((r) => r.spec),
+    );
+
+    const newSpecs = entry.specs.filter((s) => !existingSpecs.has(s));
+    if (newSpecs.length > 0) {
         db.insert(characters)
-            .values({
-                discordId: entry.discordId,
-                name: entry.name,
-                realm: entry.realm,
-                region: entry.region,
-                className: entry.className,
-                spec,
-            })
+            .values(
+                newSpecs.map((spec) => ({
+                    discordId: entry.discordId,
+                    name: entry.name,
+                    realm: entry.realm,
+                    region: entry.region,
+                    className: entry.className,
+                    spec,
+                })),
+            )
             .run();
-        inserted++;
     }
-    return { inserted, alreadyExisted };
+    return { inserted: newSpecs.length, alreadyExisted: existingSpecs.size };
 }
 
 export function listStaleCharacters(db: Db): Character[] {

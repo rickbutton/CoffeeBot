@@ -71,7 +71,7 @@ export async function handleSimCommand(
         const r = enqueueAll(db);
         worker.poke();
         await interaction.reply({
-            content: `:gear: Enqueued **${r.enqueued}** job(s)${skippedSuffix(r.skippedNoSimc)}.`,
+            content: `:gear: Enqueued **${r.enqueued}** job(s)${skippedSuffix(r)}.`,
             flags: EPHEMERAL,
         });
         return;
@@ -81,11 +81,12 @@ export async function handleSimCommand(
         const target = interaction.options.getUser("user", true);
         const r = enqueueForOwner(db, target.id);
         worker.poke();
+        const nothingMatched =
+            r.enqueued === 0 && r.skippedNoSimc === 0 && r.skippedHealer === 0;
         await interaction.reply({
-            content:
-                r.enqueued === 0 && r.skippedNoSimc === 0
-                    ? `<@${target.id}> has no stored characters.`
-                    : `:gear: Enqueued **${r.enqueued}** job(s) for <@${target.id}>${skippedSuffix(r.skippedNoSimc)}.`,
+            content: nothingMatched
+                ? `<@${target.id}> has no stored characters.`
+                : `:gear: Enqueued **${r.enqueued}** job(s) for <@${target.id}>${skippedSuffix(r)}.`,
             flags: EPHEMERAL,
             allowedMentions: { parse: [] },
         });
@@ -162,6 +163,11 @@ export async function handleSimCommand(
     }
 }
 
-function skippedSuffix(skipped: number): string {
-    return skipped > 0 ? ` (skipped ${skipped} — no simc submitted yet)` : "";
+function skippedSuffix(r: { skippedNoSimc: number; skippedHealer: number }): string {
+    const parts: string[] = [];
+    if (r.skippedNoSimc > 0) parts.push(`${r.skippedNoSimc} no simc submitted yet`);
+    if (r.skippedHealer > 0) {
+        parts.push(`${r.skippedHealer} healer spec(s) — sim manually in QELive`);
+    }
+    return parts.length > 0 ? ` (skipped ${parts.join("; ")})` : "";
 }

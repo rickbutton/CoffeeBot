@@ -8,6 +8,8 @@ import {
     setBotState,
 } from "../db/repo.js";
 import type { Character, SimJob } from "../db/schema.js";
+import { isHealerSpec } from "../parser/simc.js";
+import { groupBy, truncate } from "../util/format.js";
 import { log } from "../util/log.js";
 
 const KEY_CHANNEL = "status_channel_id";
@@ -42,9 +44,14 @@ export function renderStatusEmbed(db: Db, staleDays: number): EmbedBuilder {
     const byOwner = groupBy(all, (c) => c.discordId);
     const ownerIds = [...byOwner.keys()].sort();
 
-    const fresh = all.filter((c) => c.simc !== null && !isStale(c, staleDays)).length;
-    const stale = all.filter((c) => c.simc !== null && isStale(c, staleDays)).length;
-    const missing = all.filter((c) => c.simc === null).length;
+    let fresh = 0;
+    let stale = 0;
+    let missing = 0;
+    for (const c of all) {
+        if (c.simc === null) missing++;
+        else if (isStale(c, staleDays)) stale++;
+        else fresh++;
+    }
 
     const roster =
         ownerIds.length === 0
@@ -71,7 +78,9 @@ export function renderStatusEmbed(db: Db, staleDays: number): EmbedBuilder {
 
 function formatLine(c: Character, staleDays: number, job: SimJob | undefined): string {
     const head = `**${c.name}** *(${c.spec ?? "?"})*`;
-    const sim = formatSimStatus(c, job);
+    const sim = isHealerSpec(c.className, c.spec)
+        ? " · sim: ⊘ healer (use QELive)"
+        : formatSimStatus(c, job);
     if (c.simc === null) return `:red_circle: ${head} — _never submitted_${sim}`;
     const updated = `<t:${Math.floor(c.updatedAt.getTime() / 1000)}:R>`;
     if (isStale(c, staleDays)) {
@@ -99,8 +108,6 @@ function formatSimStatus(c: Character, job: SimJob | undefined): string {
             const link = `[report](${job.raidbotsUrl})`;
             return outdated ? ` · sim: ${link} ⚠ simc updated since` : ` · sim: ${link}`;
         }
-        default:
-            return ` · sim: ${job.status}`;
     }
 }
 
@@ -161,16 +168,3 @@ export function makeStatusUpdater(client: Client, db: Db, staleDays: number): ()
     };
 }
 
-function groupBy<T, K>(arr: T[], key: (t: T) => K): Map<K, T[]> {
-    const out = new Map<K, T[]>();
-    for (const item of arr) {
-        const list = out.get(key(item)) ?? [];
-        list.push(item);
-        out.set(key(item), list);
-    }
-    return out;
-}
-
-function truncate(s: string, n: number): string {
-    return s.length > n ? s.slice(0, n - 1) + "…" : s;
-}

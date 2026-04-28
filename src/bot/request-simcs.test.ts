@@ -5,19 +5,7 @@ import { addCharacterRoster, upsertCharacter } from "../db/repo.js";
 import { characters } from "../db/schema.js";
 import { setStatusChannel } from "./status-message.js";
 import { requestSimcs } from "./request-simcs.js";
-import type { SimcCharacter } from "../parser/simc.js";
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
+import { sampleCharacter as sample } from "../test-utils/factories.js";
 
 function makeClient(behavior: { sentTo: string[]; failIds?: Set<string> } = { sentTo: [] }) {
     return {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { looksLikeSimc, parseSimc } from "./simc.js";
+import { isHealerSpec, looksLikeSimc, parseSimc } from "./simc.js";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const realDemonHunter = readFileSync(join(FIXTURES, "demonhunter-real.txt"), "utf8");
@@ -125,6 +125,33 @@ describe("parseSimc", () => {
         if (!r.ok) return;
         expect(r.character.name).toBe("First");
         expect(r.character.className).toBe("hunter");
+    });
+});
+
+describe("isHealerSpec", () => {
+    it("recognizes healer specs across classes", () => {
+        expect(isHealerSpec("druid", "restoration")).toBe(true);
+        expect(isHealerSpec("evoker", "preservation")).toBe(true);
+        expect(isHealerSpec("monk", "mistweaver")).toBe(true);
+        expect(isHealerSpec("paladin", "holy")).toBe(true);
+        expect(isHealerSpec("priest", "discipline")).toBe(true);
+        expect(isHealerSpec("priest", "holy")).toBe(true);
+        expect(isHealerSpec("shaman", "restoration")).toBe(true);
+    });
+
+    it("does not flag DPS/tank specs that share spec slugs", () => {
+        // shaman has restoration (heal) AND elemental/enhancement (DPS); only "restoration" should match.
+        expect(isHealerSpec("shaman", "elemental")).toBe(false);
+        expect(isHealerSpec("shaman", "enhancement")).toBe(false);
+        // Druid restoration is heal; feral/balance/guardian are not.
+        expect(isHealerSpec("druid", "feral")).toBe(false);
+        expect(isHealerSpec("druid", "balance")).toBe(false);
+        // Hunter and other classes have no healer specs.
+        expect(isHealerSpec("hunter", "beast_mastery")).toBe(false);
+    });
+
+    it("returns false for null spec", () => {
+        expect(isHealerSpec("druid", null)).toBe(false);
     });
 });
 

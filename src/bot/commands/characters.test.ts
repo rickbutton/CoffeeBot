@@ -1,20 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { upsertCharacter } from "../../db/repo.js";
 import { handleCharactersCommand } from "./characters.js";
-import type { SimcCharacter } from "../../parser/simc.js";
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
+import { asyncMock, sampleCharacter as sample } from "../../test-utils/factories.js";
 
 function makeInteraction(opts: {
     sub: string;
@@ -22,7 +10,7 @@ function makeInteraction(opts: {
     targetUser?: { id: string } | null;
     options?: Record<string, unknown>;
 }) {
-    const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+    const reply = asyncMock();
     return {
         user: { id: opts.userId ?? "u1" },
         options: {

@@ -3,15 +3,7 @@ import { ChannelType } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { registerDmHandler } from "./dm.js";
-
-const VALID_SIMC = `# header
-hunter="Bowzo"
-level=80
-race=blood_elf
-region=us
-server=area-52
-spec=beast_mastery
-`;
+import { flushMicrotasks as flush, VALID_SIMC } from "../../test-utils/factories.js";
 
 function makeMsg(opts: {
     content: string;
@@ -33,11 +25,6 @@ function makeMsg(opts: {
             opts.onReply?.(content);
         }),
     };
-}
-
-async function flush(): Promise<void> {
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
 }
 
 describe("registerDmHandler", () => {

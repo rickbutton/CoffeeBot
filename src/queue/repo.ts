@@ -1,48 +1,67 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { characters, simJobs, type SimJob } from "../db/schema.js";
+import { isHealerSpec } from "../parser/simc.js";
 
 export type EnqueueResult = {
     enqueued: number;
     /** Characters skipped because they're pre-registered but have no simc yet. */
     skippedNoSimc: number;
+    /** Healer specs skipped — Raidbots doesn't sim healers; we haven't wired QELive up yet. */
+    skippedHealer: number;
     jobIds: number[];
+};
+
+type EnqueueRow = {
+    id: number;
+    simc: string | null;
+    className: string;
+    spec: string | null;
+};
+
+const ENQUEUE_COLUMNS = {
+    id: characters.id,
+    simc: characters.simc,
+    className: characters.className,
+    spec: characters.spec,
 };
 
 export function enqueueForOwner(db: Db, discordId: string): EnqueueResult {
     return enqueueRows(
         db,
-        db
-            .select({ id: characters.id, simc: characters.simc })
-            .from(characters)
-            .where(eq(characters.discordId, discordId))
-            .all(),
+        db.select(ENQUEUE_COLUMNS).from(characters).where(eq(characters.discordId, discordId)).all(),
     );
 }
 
 export function enqueueAll(db: Db): EnqueueResult {
-    return enqueueRows(
-        db,
-        db.select({ id: characters.id, simc: characters.simc }).from(characters).all(),
-    );
+    return enqueueRows(db, db.select(ENQUEUE_COLUMNS).from(characters).all());
 }
 
-function enqueueRows(db: Db, rows: { id: number; simc: string | null }[]): EnqueueResult {
-    const jobIds: number[] = [];
+function enqueueRows(db: Db, rows: EnqueueRow[]): EnqueueResult {
     let skippedNoSimc = 0;
+    let skippedHealer = 0;
+    const insertable: { id: number; simc: string }[] = [];
     for (const r of rows) {
         if (r.simc === null) {
             skippedNoSimc++;
             continue;
         }
-        const row = db
-            .insert(simJobs)
-            .values({ characterId: r.id, simcSnapshot: r.simc })
-            .returning({ id: simJobs.id })
-            .get();
-        jobIds.push(row.id);
+        if (isHealerSpec(r.className, r.spec)) {
+            skippedHealer++;
+            continue;
+        }
+        insertable.push({ id: r.id, simc: r.simc });
     }
-    return { enqueued: jobIds.length, skippedNoSimc, jobIds };
+    if (insertable.length === 0) {
+        return { enqueued: 0, skippedNoSimc, skippedHealer, jobIds: [] };
+    }
+    const inserted = db
+        .insert(simJobs)
+        .values(insertable.map((r) => ({ characterId: r.id, simcSnapshot: r.simc })))
+        .returning({ id: simJobs.id })
+        .all();
+    const jobIds = inserted.map((r) => r.id);
+    return { enqueued: jobIds.length, skippedNoSimc, skippedHealer, jobIds };
 }
 
 export function claimNextJob(db: Db): SimJob | null {

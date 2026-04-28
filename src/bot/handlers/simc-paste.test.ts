@@ -2,15 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { listCharacters } from "../../db/repo.js";
 import { processSimcMessage } from "./simc-paste.js";
-
-const VALID_SIMC = `# SimulationCraft Profile
-hunter="Bowzo"
-level=80
-race=blood_elf
-region=us
-server=area-52
-spec=beast_mastery
-`;
+import { VALID_SIMC } from "../../test-utils/factories.js";
 
 function makeMsg(content: string, attachments: unknown[] = []) {
     return {

@@ -19,6 +19,24 @@ type WowClass = (typeof WOW_CLASSES)[number];
 export const WOW_REGIONS = ["us", "eu", "kr", "tw", "cn"] as const;
 type WowRegion = (typeof WOW_REGIONS)[number];
 
+// Raidbots' droptimizer doesn't sim healers — for healer specs, the canonical tool
+// is QELive (Questionably Epic Live). We haven't wired QELive up yet, so for now
+// we just skip these specs from the Raidbots queue and surface them in the status
+// embed with a "sim manually in QELive" hint.
+export const HEALER_SPECS: ReadonlySet<string> = new Set([
+    "druid:restoration",
+    "evoker:preservation",
+    "monk:mistweaver",
+    "paladin:holy",
+    "priest:discipline",
+    "priest:holy",
+    "shaman:restoration",
+]);
+
+export function isHealerSpec(className: string, spec: string | null): boolean {
+    return spec !== null && HEALER_SPECS.has(`${className}:${spec}`);
+}
+
 const CLASS_DISPLAY: Record<WowClass, string> = {
     death_knight: "Death Knight",
     demon_hunter: "Demon Hunter",

@@ -7,21 +7,9 @@ import { simJobs } from "../db/schema.js";
 import { enqueueForOwner } from "./repo.js";
 import { startWorker, stubExecutor, type Executor } from "./worker.js";
 import type { PacingConfig } from "./pacing.js";
-import type { SimcCharacter } from "../parser/simc.js";
+import { sampleCharacter as sample } from "../test-utils/factories.js";
 
 const FAST_CFG: PacingConfig = { minDelaySeconds: 1, maxDelaySeconds: 1, dailyCap: 100 };
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
 
 async function waitFor(predicate: () => boolean, timeoutMs = 3000): Promise<void> {
     const deadline = Date.now() + timeoutMs;

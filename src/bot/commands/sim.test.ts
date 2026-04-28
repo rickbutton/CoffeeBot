@@ -3,31 +3,11 @@ import { makeTestDb } from "../../test-utils/db.js";
 import { upsertCharacter } from "../../db/repo.js";
 import { simJobs } from "../../db/schema.js";
 import { handleSimCommand } from "./sim.js";
-import type { WorkerHandle } from "../../queue/worker.js";
-import type { SimcCharacter } from "../../parser/simc.js";
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
-
-function makeWorker(overrides: Partial<WorkerHandle> = {}): WorkerHandle {
-    return {
-        pause: vi.fn(),
-        resume: vi.fn(),
-        isPaused: () => false,
-        poke: vi.fn(),
-        stop: async () => {},
-        ...overrides,
-    };
-}
+import {
+    asyncMock,
+    makeWorker,
+    sampleCharacter as sample,
+} from "../../test-utils/factories.js";
 
 function makeInteraction(opts: {
     sub: string;
@@ -36,9 +16,9 @@ function makeInteraction(opts: {
     targetUser?: { id: string };
     client?: unknown;
 }) {
-    const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
-    const deferReply = vi.fn<(opts?: unknown) => Promise<undefined>>(async () => undefined);
-    const editReply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+    const reply = asyncMock();
+    const deferReply = asyncMock();
+    const editReply = asyncMock();
     return {
         user: { id: opts.userId ?? "admin" },
         client: opts.client ?? ({ users: { fetch: async () => ({ createDM: async () => ({ send: async () => {} }) }) } }),
@@ -74,6 +54,22 @@ describe("handleSimCommand subcommands", () => {
         expect(worker.poke).toHaveBeenCalled();
         const r = i.reply.mock.calls[0]![0] as { content: string };
         expect(r.content).toMatch(/Enqueued/);
+    });
+
+    it("run-all reports skipped healers in the suffix", async () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample(), "raw");
+        upsertCharacter(
+            db,
+            "u1",
+            sample({ name: "Healz", className: "priest", spec: "discipline" }),
+            "raw",
+        );
+        const i = makeInteraction({ sub: "run-all" });
+        await handleSimCommand(i as never, db, makeWorker(), new Set(["admin"]), 7);
+        const r = i.reply.mock.calls[0]![0] as { content: string };
+        expect(r.content).toMatch(/Enqueued \*\*1\*\*/);
+        expect(r.content).toMatch(/healer spec\(s\) — sim manually in QELive/);
     });
 
     it("run reports no characters when target has none", async () => {

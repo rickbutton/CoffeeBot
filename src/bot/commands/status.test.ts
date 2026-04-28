@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { getStatusChannelId, setStatusChannel } from "../status-message.js";
 import { handleStatusCommand } from "./status.js";
+import { asyncMock } from "../../test-utils/factories.js";
 
 const ALL_PERMS_BIT = Object.values(PermissionFlagsBits).reduce(
     (a, b) => a | (b as bigint),
@@ -39,9 +40,9 @@ function makeInteraction(opts: {
     userId?: string;
     channel?: ReturnType<typeof makeChannel>;
 }) {
-    const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
-    const deferReply = vi.fn<(opts?: unknown) => Promise<undefined>>(async () => undefined);
-    const editReply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+    const reply = asyncMock();
+    const deferReply = asyncMock();
+    const editReply = asyncMock();
     return {
         user: { id: opts.userId ?? "admin" },
         options: {

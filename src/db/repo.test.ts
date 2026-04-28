@@ -15,20 +15,8 @@ import {
     setBotState,
     upsertCharacter,
 } from "./repo.js";
-import type { SimcCharacter } from "../parser/simc.js";
+import { sampleCharacter as sampleParsed } from "../test-utils/factories.js";
 import { characters, simJobs } from "./schema.js";
-
-const sampleParsed = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
 
 describe("upsertCharacter", () => {
     it("inserts and then updates the same row when re-pasted", () => {

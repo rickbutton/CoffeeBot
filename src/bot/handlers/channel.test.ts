@@ -4,15 +4,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
 import { setStatusChannel } from "../status-message.js";
 import { registerChannelHandler } from "./channel.js";
-
-const VALID_SIMC = `# header
-hunter="Bowzo"
-level=80
-race=blood_elf
-region=us
-server=area-52
-spec=beast_mastery
-`;
+import { flushMicrotasks as flush, VALID_SIMC } from "../../test-utils/factories.js";
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -42,14 +34,6 @@ function makeMsg(opts: {
         reply,
         delete: vi.fn(async () => {}),
     };
-}
-
-async function flush(): Promise<void> {
-    // Drain microtasks under fake timers.
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
 }
 
 describe("registerChannelHandler", () => {

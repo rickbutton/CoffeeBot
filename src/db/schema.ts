@@ -51,6 +51,9 @@ export const characters = sqliteTable(
     }),
 );
 
+export const JOB_STATUSES = ["queued", "running", "done", "failed", "cancelled"] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
 export const simJobs = sqliteTable(
     "sim_jobs",
     {
@@ -58,7 +61,7 @@ export const simJobs = sqliteTable(
         characterId: integer("character_id")
             .notNull()
             .references(() => characters.id, { onDelete: "cascade" }),
-        status: text("status").notNull().default("queued"), // queued|running|done|failed|cancelled
+        status: text("status", { enum: JOB_STATUSES }).notNull().default("queued"),
         simcSnapshot: text("simc_snapshot").notNull(),
         raidbotsReportId: text("raidbots_report_id"),
         raidbotsUrl: text("raidbots_url"),

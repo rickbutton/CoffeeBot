@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { Db } from "../db/client.js";
 import type { SimJob } from "../db/schema.js";
+import { truncate } from "../util/format.js";
 import { log } from "../util/log.js";
 import { evaluateGate, jitterDelayMs, utcDayStart, type PacingConfig } from "./pacing.js";
 import {
@@ -153,10 +154,6 @@ export function startWorker(
             wake?.();
         },
     };
-}
-
-function truncate(s: string, n: number): string {
-    return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
 export const stubExecutor: Executor = async (job) => {

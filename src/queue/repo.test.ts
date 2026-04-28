@@ -14,19 +14,7 @@ import {
     queueStatus,
     requeueStuckRunning,
 } from "./repo.js";
-import type { SimcCharacter } from "../parser/simc.js";
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
+import { sampleCharacter as sample } from "../test-utils/factories.js";
 
 describe("enqueueForOwner / enqueueAll", () => {
     it("skips characters with no simc and counts the rest", () => {
@@ -44,7 +32,29 @@ describe("enqueueForOwner / enqueueAll", () => {
         const r = enqueueForOwner(db, "u1");
         expect(r.enqueued).toBe(2);
         expect(r.skippedNoSimc).toBe(1);
+        expect(r.skippedHealer).toBe(0);
         expect(r.jobIds).toHaveLength(2);
+    });
+
+    it("skips healer specs and reports them separately", () => {
+        const db = makeTestDb();
+        upsertCharacter(db, "u1", sample({ name: "Bowzo" }), "raw");
+        upsertCharacter(
+            db,
+            "u1",
+            sample({ name: "Healz", className: "priest", spec: "discipline" }),
+            "raw",
+        );
+        upsertCharacter(
+            db,
+            "u1",
+            sample({ name: "Sham", className: "shaman", spec: "restoration" }),
+            "raw",
+        );
+        const r = enqueueForOwner(db, "u1");
+        expect(r.enqueued).toBe(1);
+        expect(r.skippedNoSimc).toBe(0);
+        expect(r.skippedHealer).toBe(2);
     });
 
     it("enqueueAll covers all owners", () => {
@@ -53,6 +63,7 @@ describe("enqueueForOwner / enqueueAll", () => {
         upsertCharacter(db, "u2", sample({ name: "B" }), "raw");
         const r = enqueueAll(db);
         expect(r.enqueued).toBe(2);
+        expect(r.skippedHealer).toBe(0);
     });
 });
 

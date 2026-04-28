@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { handleHelpCommand } from "./help.js";
+import { asyncMock } from "../../test-utils/factories.js";
 
 describe("handleHelpCommand", () => {
     it("rejects non-admins", async () => {
-        const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+        const reply = asyncMock();
         const i = { user: { id: "x" }, reply } as never;
         await handleHelpCommand(i, new Set(["admin"]));
         expect(reply).toHaveBeenCalledWith(
@@ -12,7 +13,7 @@ describe("handleHelpCommand", () => {
     });
 
     it("returns the help body to admins", async () => {
-        const reply = vi.fn<(opts: unknown) => Promise<undefined>>(async () => undefined);
+        const reply = asyncMock();
         const i = { user: { id: "admin" }, reply } as never;
         await handleHelpCommand(i, new Set(["admin"]));
         const arg = reply.mock.calls[0]![0] as { content: string };

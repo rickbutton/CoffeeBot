@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { ChannelType } from "discord.js";
 import { makeTestDb } from "../test-utils/db.js";
@@ -12,19 +12,7 @@ import {
     setStatusChannel,
     updateStatusMessage,
 } from "./status-message.js";
-import type { SimcCharacter } from "../parser/simc.js";
-
-const sample = (overrides: Partial<SimcCharacter> = {}): SimcCharacter => ({
-    className: "hunter",
-    classDisplay: "Hunter",
-    name: "Bowzo",
-    region: "us",
-    realm: "area-52",
-    spec: "beast_mastery",
-    level: 80,
-    race: "blood_elf",
-    ...overrides,
-} as SimcCharacter);
+import { sampleCharacter as sample } from "../test-utils/factories.js";
 
 describe("status channel state", () => {
     it("set/get/clear round-trips channel + message ids", () => {
@@ -169,14 +157,26 @@ describe("renderStatusEmbed", () => {
         expect(desc).toContain("(boom)");
     });
 
-    it("falls through to default for unknown status values", () => {
+    it("renders healer specs with the QELive hint instead of a sim status", () => {
         const db = makeTestDb();
-        const c = upsertCharacter(db, "u1", sample(), "raw");
+        const c = upsertCharacter(
+            db,
+            "u1",
+            sample({ name: "Healz", className: "priest", spec: "discipline" }),
+            "raw",
+        );
+        // Even if a stale job row exists, healers shouldn't show a regular sim status.
         db.insert(simJobs)
-            .values({ characterId: c.id, simcSnapshot: "raw", status: "weirdstate" })
+            .values({
+                characterId: c.id,
+                simcSnapshot: "raw",
+                status: "done",
+                raidbotsUrl: "https://x/r/abc",
+            })
             .run();
         const desc = renderStatusEmbed(db, 7).toJSON().description!;
-        expect(desc).toContain("weirdstate");
+        expect(desc).toContain("healer (use QELive)");
+        expect(desc).not.toContain("https://x/r/abc");
     });
 });
 
@@ -250,6 +250,9 @@ describe("updateStatusMessage", () => {
 });
 
 describe("makeStatusUpdater", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
     it("logs error when the underlying update rejects", async () => {
         const db = makeTestDb();
         setStatusChannel(db, "chan", "msg");
@@ -262,9 +265,9 @@ describe("makeStatusUpdater", () => {
         } as never;
         const updater = makeStatusUpdater(client, db, 7);
         updater();
-        await new Promise((r) => setTimeout(r, 1700));
-        // No throw to test runner = success.
-    }, 5_000);
+        await vi.runAllTimersAsync();
+        // No throw to the runner = success.
+    });
 
     it("debounces calls and triggers updateStatusMessage once", async () => {
         const db = makeTestDb();
@@ -284,8 +287,8 @@ describe("makeStatusUpdater", () => {
         updater();
         updater();
         updater();
-        await new Promise((r) => setTimeout(r, 1700));
+        await vi.runAllTimersAsync();
         expect(fetch).toHaveBeenCalledOnce();
         expect(edit).toHaveBeenCalledOnce();
-    }, 5_000);
+    });
 });
