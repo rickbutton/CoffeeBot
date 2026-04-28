@@ -67,6 +67,8 @@ Raidbots has no public sim API and the maintainer is openly hostile to scraping 
 
 When raidbots changes its DOM and a selector breaks, the failing log line tells you which step. Selectors live as plain Playwright locators in [src/raidbots/apply-settings.ts](src/raidbots/apply-settings.ts), [automation.ts](src/raidbots/automation.ts), and [login.ts](src/raidbots/login.ts) — the easiest update path is a Claude Code session with the Playwright MCP server enabled. The same applies to QELive's selectors in [src/qelive/import-gear.ts](src/qelive/import-gear.ts), [apply-settings.ts](src/qelive/apply-settings.ts), and [automation.ts](src/qelive/automation.ts).
 
+When a Raidbots run throws, [src/raidbots/automation.ts](src/raidbots/automation.ts) writes a full-page screenshot to `<dirname(DB_PATH)>/debug/raidbots-fail-<timestamp>.png` (so `/data/debug/` on Fly, `./data/debug/` locally). Pull them down with `fly ssh sftp get /data/debug/<file>` to diagnose environment-specific failures (Cloudflare challenge pages, viewport differences, stale profile state).
+
 ## Working with this repo
 
 See [CLAUDE.md](CLAUDE.md) for agent (and human) guidelines: tests are required for every change, project-wide line coverage stays ≥ 90%, and patterns for mocking Playwright / discord.js live alongside the existing tests.

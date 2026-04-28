@@ -1,3 +1,6 @@
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { runDroptimizer } from "./automation.js";
 
@@ -51,6 +54,7 @@ function makePage(opts: {
         close: vi.fn(async () => {
             opts.onClose?.();
         }),
+        screenshot: vi.fn(async () => Buffer.from([])),
         getByRole: vi.fn(() => ({ first: () => makeLocator() })),
         locator: vi.fn((sel: string) => {
             if (sel === "body")
@@ -178,5 +182,26 @@ describe("runDroptimizer", () => {
         });
         if (r.ok) throw new Error("expected fail");
         expect(r.error).toBeTruthy();
+    });
+
+    it("captures a failure screenshot under <DB_PATH dir>/debug when an exception bubbles out", async () => {
+        const dir = join(tmpdir(), `coffeebot-shot-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        vi.stubEnv("DB_PATH", join(dir, "bot.db"));
+        try {
+            const page = makePage({});
+            page.locator = vi.fn(() => ({
+                ...makeLocator({ fillThrows: true }),
+                innerText: vi.fn(async () => ""),
+            })) as never;
+            await runDroptimizer(makeSession(page), "x", { postPasteSettleMs: 0 });
+            expect(page.screenshot).toHaveBeenCalledTimes(1);
+            const arg = (page.screenshot as unknown as { mock: { calls: [{ path: string; fullPage: boolean }][] } }).mock.calls[0]?.[0];
+            expect(arg?.path).toMatch(/[\\/]debug[\\/]raidbots-fail-.*\.png$/);
+            expect(arg?.path.startsWith(dir)).toBe(true);
+            expect(arg?.fullPage).toBe(true);
+        } finally {
+            vi.unstubAllEnvs();
+            await rm(dir, { recursive: true, force: true });
+        }
     });
 });

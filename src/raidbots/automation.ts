@@ -1,3 +1,5 @@
+import { mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import type { Page } from "playwright";
 import { log } from "../util/log.js";
 import { applySettings } from "./apply-settings.js";
@@ -105,9 +107,24 @@ export async function runDroptimizer(
         return { ok: true, reportUrl, reportId, completed: true };
     } catch (err) {
         log.error({ err }, "raidbots: unexpected error");
+        await captureFailureScreenshot(page);
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
     } finally {
         if (o.submitRun) await page.close().catch(() => {});
+    }
+}
+
+async function captureFailureScreenshot(page: Page): Promise<void> {
+    try {
+        const dataDir = dirname(process.env.DB_PATH ?? "./data/bot.db");
+        const debugDir = `${dataDir}/debug`;
+        await mkdir(debugDir, { recursive: true });
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        const file = `${debugDir}/raidbots-fail-${ts}.png`;
+        await page.screenshot({ path: file, fullPage: true });
+        log.info({ file }, "raidbots: captured failure screenshot");
+    } catch (err) {
+        log.warn({ err }, "raidbots: failed to capture screenshot");
     }
 }
 

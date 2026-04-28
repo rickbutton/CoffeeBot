@@ -68,27 +68,29 @@ describe("applySettings", () => {
         await applySettings(page, SIM_SETTINGS);
     });
 
-    it("skips upgrade-ilvl picker when not visible", async () => {
+    it("throws when upgrade-ilvl picker is not visible", async () => {
         const page = makePage({
-            "#react-select-7-input": { visible: false },
+            "#react-select-7-input": { waitFails: true },
+        });
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade ilvl/i);
+    });
+
+    it("skips upgrade-equipped when already checked", async () => {
+        const page = makePage({
+            'input[name="upgradeEquipped"]': { checked: true },
         });
         await applySettings(page, SIM_SETTINGS);
     });
 
-    it("skips upgrade-equipped when label not visible or already checked", async () => {
-        const page1 = makePage({
-            "label": { visible: false },
+    it("throws when upgrade-equipped label is not visible", async () => {
+        const page = makePage({
+            "label": { waitFails: true },
+            'input[name="upgradeEquipped"]': { checked: false },
         });
-        await applySettings(page1, SIM_SETTINGS);
-
-        const page2 = makePage({
-            'input[name="upgradeEquipped"]': { checked: true },
-        });
-        await applySettings(page2, SIM_SETTINGS);
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade-all-equipped/i);
     });
 
-    it("falls back to warn when upgrade-ilvl click path throws", async () => {
-        // Trigger visible:true, but then maxOption.waitFor throws.
+    it("throws when upgrade-ilvl click path fails", async () => {
         let count = 0;
         const page = {
             locator: vi.fn((sel: string) => {
@@ -111,11 +113,11 @@ describe("applySettings", () => {
                 return makeLocator();
             }),
         } as never;
-        await applySettings(page, SIM_SETTINGS);
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade ilvl/i);
         expect(count).toBeGreaterThan(0);
     });
 
-    it("warns when upgrade-equipped label click throws", async () => {
+    it("throws when upgrade-equipped label click fails", async () => {
         const page = {
             locator: vi.fn((sel: string) => {
                 if (sel === "label") {
@@ -138,6 +140,6 @@ describe("applySettings", () => {
                 return makeLocator();
             }),
         } as never;
-        await applySettings(page, SIM_SETTINGS);
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade-all-equipped/i);
     });
 });

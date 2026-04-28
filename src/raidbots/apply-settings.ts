@@ -52,8 +52,8 @@ async function selectFightStyle(page: Page, style: SimSettings["fightStyle"]): P
 
 async function selectMaxUpgradeIlvl(page: Page): Promise<void> {
     const trigger = page.locator("#react-select-7-input");
-    if (!(await trigger.isVisible().catch(() => false))) return;
     try {
+        await trigger.waitFor({ state: "visible", timeout: 10_000 });
         await trigger.click();
         const maxOption = page
             .locator('[id^="react-select-7-option"]')
@@ -63,23 +63,25 @@ async function selectMaxUpgradeIlvl(page: Page): Promise<void> {
         await maxOption.click();
         log.info("raidbots: picked max upgrade ilvl (X 6/6)");
     } catch (err) {
-        log.warn({ err }, "raidbots: could not pick max upgrade ilvl");
+        log.error({ err }, "raidbots: could not pick max upgrade ilvl");
+        throw new Error("could not select max upgrade ilvl (X 6/6)", { cause: err });
     }
 }
 
 // The real <input> is opacity:0; a sibling div intercepts clicks. Click the wrapping label instead.
 async function checkUpgradeAllEquipped(page: Page): Promise<void> {
+    const input = page.locator('input[name="upgradeEquipped"]').first();
+    if (await input.isChecked().catch(() => false)) return;
     const label = page
         .locator("label")
         .filter({ hasText: /upgrade all equipped gear/i })
         .first();
-    if (!(await label.isVisible().catch(() => false))) return;
-    const input = page.locator('input[name="upgradeEquipped"]').first();
-    if (await input.isChecked().catch(() => false)) return;
     try {
+        await label.waitFor({ state: "visible", timeout: 10_000 });
         await label.click();
         log.info("raidbots: enabled upgrade-all-equipped");
     } catch (err) {
-        log.warn({ err }, "raidbots: could not enable upgrade-all-equipped");
+        log.error({ err }, "raidbots: could not enable upgrade-all-equipped");
+        throw new Error("could not enable upgrade-all-equipped", { cause: err });
     }
 }
