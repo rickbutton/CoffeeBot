@@ -6,9 +6,33 @@ export async function applySettings(page: Page, s: SimSettings): Promise<void> {
     await selectSource(page, s.source);
     // Difficulty must precede upgrade-items-up-to — that dropdown's options are difficulty-scoped.
     await selectDifficulty(page, s.difficulty);
+    // Simulation Options panel must be open before fight-style and upgrade-ilvl: those react-selects
+    // only mount when the panel is expanded (Raidbots persists open/closed in localStorage per profile).
+    await ensureSimulationOptionsOpen(page);
     await selectFightStyle(page, s.fightStyle);
     await selectMaxUpgradeIlvl(page);
     await checkUpgradeAllEquipped(page);
+}
+
+async function ensureSimulationOptionsOpen(page: Page): Promise<void> {
+    const select = page.locator("select#AdvancedSimOptions-fightStyle");
+    if (await select.isVisible({ timeout: 500 }).catch(() => false)) return;
+    // The clickable title is a leaf <div class="Box"> whose own (direct) text is
+    // "Simulation Options:" — when the panel is collapsed, its full textContent is the entire
+    // summary line ("Simulation Options: Smart Sim, Patchwerk, ..."), so we have to filter on
+    // the element's direct text node, which only XPath's text() exposes. Click is a toggle —
+    // safe because we early-return above if the select is already mounted.
+    const header = page.locator(
+        "xpath=//div[contains(@class,'Box') and starts-with(normalize-space(text()),'Simulation Options:')]",
+    );
+    try {
+        await header.click({ timeout: 5_000 });
+        await select.waitFor({ state: "visible", timeout: 10_000 });
+        log.info("raidbots: expanded Simulation Options panel");
+    } catch (err) {
+        log.error({ err }, "raidbots: could not expand Simulation Options panel");
+        throw new Error("Simulation Options panel did not expand", { cause: err });
+    }
 }
 
 async function selectSource(page: Page, source: string): Promise<void> {
@@ -40,31 +64,38 @@ async function selectDifficulty(page: Page, difficulty: SimSettings["difficulty"
 }
 
 async function selectFightStyle(page: Page, style: SimSettings["fightStyle"]): Promise<void> {
+    const label = fightStyleLabel(style);
     try {
-        await page.locator("select#AdvancedSimOptions-fightStyle").selectOption({
-            label: fightStyleLabel(style),
-        });
+        await page.locator("select#AdvancedSimOptions-fightStyle").selectOption({ label });
         log.info({ style }, "raidbots: selected fight style");
     } catch (err) {
-        log.warn({ err, style }, "raidbots: fight style select failed; skipping");
+        log.error({ err, style }, "raidbots: fight style select failed");
+        throw new Error(`could not select fight style "${label}"`, { cause: err });
     }
 }
 
 async function selectMaxUpgradeIlvl(page: Page): Promise<void> {
-    const trigger = page.locator("#react-select-7-input");
+    // The react-select index is auto-numbered and shifts with which other selects are mounted
+    // (regions, realms, etc.), so we anchor on the "Upgrade up to:" label text and walk forward
+    // to the first react-select input. Options match the "X 6/6" text rather than a numbered id.
+    const trigger = page.locator(
+        "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::input[starts-with(@id,'react-select-')])[1]",
+    );
     try {
         await trigger.waitFor({ state: "visible", timeout: 10_000 });
         await trigger.click();
+        // Options look like "289Myth 6/6", "285Myth 5/6", etc. — only the max-track-max-rank
+        // option ends in "6/6" preceded by a non-digit, so this matches uniquely.
         const maxOption = page
-            .locator('[id^="react-select-7-option"]')
-            .filter({ hasText: "6/6" })
+            .locator("[role='option']")
+            .filter({ hasText: /\b6\s*\/\s*6\b/ })
             .first();
         await maxOption.waitFor({ state: "visible", timeout: 5_000 });
         await maxOption.click();
-        log.info("raidbots: picked max upgrade ilvl (X 6/6)");
+        log.info("raidbots: picked max upgrade ilvl (6/6)");
     } catch (err) {
         log.error({ err }, "raidbots: could not pick max upgrade ilvl");
-        throw new Error("could not select max upgrade ilvl (X 6/6)", { cause: err });
+        throw new Error("could not select max upgrade ilvl (6/6)", { cause: err });
     }
 }
 

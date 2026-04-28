@@ -11,7 +11,9 @@ type LocatorState = {
 function makeLocator(state: LocatorState = {}) {
     return {
         first: () => makeLocator(state),
+        last: () => makeLocator(state),
         filter: () => makeLocator(state),
+        locator: () => makeLocator(state),
         waitFor: vi.fn(async () => {
             if (state.waitFails) throw new Error("not found");
         }),
@@ -22,6 +24,11 @@ function makeLocator(state: LocatorState = {}) {
     };
 }
 
+const SIM_OPTIONS_HEADER_XPATH =
+    "xpath=//div[contains(@class,'Box') and starts-with(normalize-space(text()),'Simulation Options:')]";
+const UPGRADE_TRIGGER_XPATH =
+    "xpath=(//*[starts-with(normalize-space(text()),'Upgrade up to:')]/following::input[starts-with(@id,'react-select-')])[1]";
+
 function makePage(locators: Record<string, LocatorState> = {}) {
     return {
         locator: vi.fn((sel: string) => makeLocator(locators[sel] ?? {})),
@@ -29,9 +36,9 @@ function makePage(locators: Record<string, LocatorState> = {}) {
 }
 
 describe("applySettings", () => {
-    it("happy path runs through all setters", async () => {
+    it("happy path runs through all setters when fight-style select is already mounted", async () => {
         const page = makePage({
-            "#react-select-7-input": { visible: true },
+            "select#AdvancedSimOptions-fightStyle": { visible: true },
             'input[name="upgradeEquipped"]': { checked: false },
         });
         await applySettings(page, SIM_SETTINGS);
@@ -52,61 +59,94 @@ describe("applySettings", () => {
         await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/difficulty/i);
     });
 
-    it("warns and skips fight style when select fails", async () => {
-        // Make selectOption throw; should not bubble.
+    it("expands Simulation Options when fight-style select isn't initially visible", async () => {
+        let panelOpen = false;
+        const headerClick = vi.fn(async () => {
+            panelOpen = true;
+        });
         const page = {
             locator: vi.fn((sel: string) => {
-                if (sel === "select#AdvancedSimOptions-fightStyle") {
+                if (sel === "select#AdvancedSimOptions-fightStyle")
                     return {
                         ...makeLocator(),
-                        selectOption: vi.fn(async () => Promise.reject(new Error("nope"))),
+                        isVisible: vi.fn(async () => panelOpen),
+                        waitFor: vi.fn(async () => {
+                            if (!panelOpen) throw new Error("not visible");
+                        }),
+                        selectOption: vi.fn(async () => []),
                     };
-                }
-                return makeLocator({ visible: false });
+                if (sel === SIM_OPTIONS_HEADER_XPATH)
+                    return { ...makeLocator(), click: headerClick };
+                return makeLocator();
             }),
         } as never;
         await applySettings(page, SIM_SETTINGS);
+        expect(headerClick).toHaveBeenCalledTimes(1);
     });
 
-    it("throws when upgrade-ilvl picker is not visible", async () => {
-        const page = makePage({
-            "#react-select-7-input": { waitFails: true },
-        });
+    it("throws when Simulation Options panel cannot be expanded", async () => {
+        const page = {
+            locator: vi.fn((sel: string) => {
+                if (sel === "select#AdvancedSimOptions-fightStyle")
+                    return {
+                        ...makeLocator(),
+                        isVisible: vi.fn(async () => false),
+                        waitFor: vi.fn(async () => Promise.reject(new Error("not visible"))),
+                    };
+                if (sel === SIM_OPTIONS_HEADER_XPATH)
+                    return {
+                        ...makeLocator(),
+                        click: vi.fn(async () => Promise.reject(new Error("no header"))),
+                    };
+                return makeLocator();
+            }),
+        } as never;
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(
+            /Simulation Options panel did not expand/,
+        );
+    });
+
+    it("throws when fight-style selectOption fails", async () => {
+        const page = {
+            locator: vi.fn((sel: string) => {
+                if (sel === "select#AdvancedSimOptions-fightStyle")
+                    return {
+                        ...makeLocator({ visible: true }),
+                        selectOption: vi.fn(async () => Promise.reject(new Error("nope"))),
+                    };
+                return makeLocator();
+            }),
+        } as never;
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/fight style/i);
+    });
+
+    it("throws when upgrade-ilvl trigger is not visible", async () => {
+        const page = {
+            locator: vi.fn((sel: string) => {
+                if (sel === "select#AdvancedSimOptions-fightStyle")
+                    return makeLocator({ visible: true });
+                if (sel === UPGRADE_TRIGGER_XPATH) return makeLocator({ waitFails: true });
+                return makeLocator();
+            }),
+        } as never;
         await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade ilvl/i);
     });
 
-    it("skips upgrade-equipped when already checked", async () => {
-        const page = makePage({
-            'input[name="upgradeEquipped"]': { checked: true },
-        });
-        await applySettings(page, SIM_SETTINGS);
-    });
-
-    it("throws when upgrade-equipped label is not visible", async () => {
-        const page = makePage({
-            "label": { waitFails: true },
-            'input[name="upgradeEquipped"]': { checked: false },
-        });
-        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade-all-equipped/i);
-    });
-
-    it("throws when upgrade-ilvl click path fails", async () => {
-        let count = 0;
+    it("throws when 6/6 option does not appear after clicking the upgrade-ilvl trigger", async () => {
         const page = {
             locator: vi.fn((sel: string) => {
-                count++;
-                if (sel === "#react-select-7-input") return makeLocator({ visible: true });
-                if (sel === '[id^="react-select-7-option"]')
+                if (sel === "select#AdvancedSimOptions-fightStyle")
+                    return makeLocator({ visible: true });
+                if (sel === UPGRADE_TRIGGER_XPATH) return makeLocator({ visible: true });
+                if (sel === "[role='option']")
                     return {
                         ...makeLocator(),
-                        first: () => ({
-                            ...makeLocator(),
-                            waitFor: vi.fn(async () => Promise.reject(new Error("none"))),
-                        }),
                         filter: () => ({
                             first: () => ({
                                 ...makeLocator(),
-                                waitFor: vi.fn(async () => Promise.reject(new Error("none"))),
+                                waitFor: vi.fn(async () =>
+                                    Promise.reject(new Error("no 6/6 option")),
+                                ),
                             }),
                         }),
                     };
@@ -114,12 +154,30 @@ describe("applySettings", () => {
             }),
         } as never;
         await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade ilvl/i);
-        expect(count).toBeGreaterThan(0);
+    });
+
+    it("skips upgrade-equipped when already checked", async () => {
+        const page = makePage({
+            "select#AdvancedSimOptions-fightStyle": { visible: true },
+            'input[name="upgradeEquipped"]': { checked: true },
+        });
+        await applySettings(page, SIM_SETTINGS);
+    });
+
+    it("throws when upgrade-equipped label is not visible", async () => {
+        const page = makePage({
+            "select#AdvancedSimOptions-fightStyle": { visible: true },
+            "label": { waitFails: true },
+            'input[name="upgradeEquipped"]': { checked: false },
+        });
+        await expect(applySettings(page, SIM_SETTINGS)).rejects.toThrow(/upgrade-all-equipped/i);
     });
 
     it("throws when upgrade-equipped label click fails", async () => {
         const page = {
             locator: vi.fn((sel: string) => {
+                if (sel === "select#AdvancedSimOptions-fightStyle")
+                    return makeLocator({ visible: true });
                 if (sel === "label") {
                     return {
                         ...makeLocator(),
