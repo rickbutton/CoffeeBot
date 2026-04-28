@@ -1,0 +1,1 @@
+ALTER TABLE `characters` ADD `wowaudit_id` integer;

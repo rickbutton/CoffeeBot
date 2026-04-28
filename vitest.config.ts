@@ -16,6 +16,7 @@ export default defineConfig({
                 "src/db/migrate.ts",
                 "src/raidbots/test-sim.ts",
                 "src/qelive/test-sim.ts",
+                "src/wowaudit/test-flow.ts",
                 "src/wowutils/generate-script.ts",
                 "src/bot/register-commands.ts",
                 "src/index.ts",

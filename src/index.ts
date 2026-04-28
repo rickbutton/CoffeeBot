@@ -61,7 +61,7 @@ async function main(): Promise<void> {
 
     const client = createClient();
     const triggerStatusUpdate = makeStatusUpdater(client, db, config.requestSimcs.staleDays);
-    const wowauditUploader = config.wowaudit ? makeUploader(config.wowaudit) : null;
+    const wowauditUploader = config.wowaudit ? makeUploader(config.wowaudit, db) : null;
     if (wowauditUploader) {
         log.info({ baseUrl: config.wowaudit!.baseUrl }, "wowaudit upload enabled");
     }
@@ -75,11 +75,7 @@ async function main(): Promise<void> {
                       log.warn({ jobId, characterId }, "wowaudit: character not found; skipping");
                       return;
                   }
-                  const result = await wowauditUploader({
-                      jobId,
-                      reportUrl,
-                      characterName: character.name,
-                  });
+                  const result = await wowauditUploader({ jobId, reportUrl, character });
                   if (result.uploaded) markWowauditUploaded(db, jobId);
               }
             : undefined,

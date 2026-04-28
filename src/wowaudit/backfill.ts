@@ -1,13 +1,13 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { characters, simJobs } from "../db/schema.js";
+import { characters, simJobs, type Character } from "../db/schema.js";
 import { markWowauditUploaded } from "../queue/repo.js";
 import type { Uploader } from "./upload.js";
 
 export type BackfillResult = {
-    /** Successfully POSTed and stamped. */
+    /** Successfully POSTed, verified, and stamped. */
     uploaded: number;
-    /** POST attempted but uploader returned `uploaded: false` (HTTP error / no report id). */
+    /** Attempted but uploader returned `uploaded: false` (HTTP error / no report id / verify mismatch / unresolved id). */
     failed: number;
     /** Row missing the joined character or report URL — can't even attempt. */
     skipped: number;
@@ -20,11 +20,7 @@ export type BackfillResult = {
  */
 export async function backfillWowaudit(db: Db, uploader: Uploader): Promise<BackfillResult> {
     const rows = db
-        .select({
-            id: simJobs.id,
-            reportUrl: simJobs.reportUrl,
-            characterName: characters.name,
-        })
+        .select({ job: simJobs, character: characters })
         .from(simJobs)
         .leftJoin(characters, eq(simJobs.characterId, characters.id))
         .where(
@@ -40,17 +36,18 @@ export async function backfillWowaudit(db: Db, uploader: Uploader): Promise<Back
     let failed = 0;
     let skipped = 0;
     for (const row of rows) {
-        if (!row.reportUrl || !row.characterName) {
+        if (!row.job.reportUrl || !row.character) {
             skipped++;
             continue;
         }
+        const character: Character = row.character;
         const result = await uploader({
-            jobId: row.id,
-            reportUrl: row.reportUrl,
-            characterName: row.characterName,
+            jobId: row.job.id,
+            reportUrl: row.job.reportUrl,
+            character,
         });
         if (result.uploaded) {
-            markWowauditUploaded(db, row.id);
+            markWowauditUploaded(db, row.job.id);
             uploaded++;
         } else {
             failed++;

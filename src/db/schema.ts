@@ -34,6 +34,10 @@ export const characters = sqliteTable(
         race: text("race"),
         // Nullable: admin can pre-register via /characters register before the player submits.
         simc: text("simc"),
+        // Cached wowaudit roster id, populated lazily on first successful upload-verify
+        // pass. NULL means "not yet resolved"; a value means we've matched this row to
+        // wowaudit's character record by (name, realm) at least once.
+        wowauditId: integer("wowaudit_id"),
         updatedAt: integer("updated_at", { mode: "timestamp" })
             .notNull()
             .default(sql`(unixepoch())`),
