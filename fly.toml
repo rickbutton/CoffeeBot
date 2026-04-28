@@ -11,6 +11,8 @@ primary_region = "ord"
   PLAYWRIGHT_HEADLESS = "true"
   RAIDBOTS_EXECUTOR = "playwright"
   LOG_LEVEL = "info"
+  SIM_DAILY_CAP = 90
+  WOWAUDIT_BASE_URL = "https://wowaudit.com/"
 
 [mounts]
   source = "coffeebot_data"
