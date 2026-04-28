@@ -142,12 +142,22 @@ export async function uploadWishlist(
 }
 
 /**
+ * Normalize a name or realm for cross-source comparison. Handles all of:
+ *   - case differences ("Stormrage" vs "stormrage")
+ *   - SimC realm slugs vs Blizzard display names ("area_52" vs "Area 52")
+ *   - apostrophes ("Mal'Ganis" vs "malganis" vs "mal_ganis")
+ *   - trailing region suffix ("Stormrage-US")
+ */
+function normalizeRealmOrName(s: string): string {
+    return s
+        .toLowerCase()
+        .replace(/-[a-z]+$/i, "")
+        .replace(/[^a-z0-9]/g, "");
+}
+
+/**
  * Resolve a local Character row to wowaudit's roster id, caching the result on
  * the row. Returns the id, or null with a reason if no roster row matches.
- *
- * Matching is case-insensitive on `(name, realm)` since wowaudit normalizes
- * realm names ("Stormrage" vs "stormrage" vs "Stormrage-US"); our SimC parser
- * leaves them as the player typed them.
  */
 export async function resolveWowauditId(
     cfg: WowauditConfig,
@@ -161,12 +171,12 @@ export async function resolveWowauditId(
     const list = await listWowauditCharacters(cfg, fetchFn);
     if (!list.ok) return { ok: false, error: `roster fetch failed: ${list.error}` };
 
-    const wantedName = character.name.toLowerCase();
-    const wantedRealm = character.realm.toLowerCase().replace(/-[a-z]+$/i, "");
+    const wantedName = normalizeRealmOrName(character.name);
+    const wantedRealm = normalizeRealmOrName(character.realm);
     const match = list.characters.find(
         (c) =>
-            c.name.toLowerCase() === wantedName &&
-            c.realm.toLowerCase().replace(/-[a-z]+$/i, "") === wantedRealm,
+            normalizeRealmOrName(c.name) === wantedName &&
+            normalizeRealmOrName(c.realm) === wantedRealm,
     );
     if (!match) {
         return {

@@ -261,6 +261,29 @@ describe("resolveWowauditId", () => {
         expect(r).toEqual({ ok: true, wowauditId: 5 });
     });
 
+    it("matches a SimC realm slug against wowaudit's spaced display name", async () => {
+        // SimC: "area_52" / "mal_ganis"; wowaudit: "Area 52" / "Mal'Ganis".
+        const db = makeTestDb();
+        const c = mkCharacter(db, { name: "Eeldy", realm: "area_52" });
+        const fetchFn = fakeFetch({
+            ok: true,
+            body: JSON.stringify([{ id: 21, name: "Eeldy", realm: "Area 52" }]),
+        });
+        const r = await resolveWowauditId(cfg, db, c, fetchFn);
+        expect(r).toEqual({ ok: true, wowauditId: 21 });
+    });
+
+    it("strips apostrophes from realm names too (Mal'Ganis vs mal_ganis)", async () => {
+        const db = makeTestDb();
+        const c = mkCharacter(db, { name: "Toon", realm: "mal_ganis" });
+        const fetchFn = fakeFetch({
+            ok: true,
+            body: JSON.stringify([{ id: 99, name: "Toon", realm: "Mal'Ganis" }]),
+        });
+        const r = await resolveWowauditId(cfg, db, c, fetchFn);
+        expect(r).toEqual({ ok: true, wowauditId: 99 });
+    });
+
     it("returns error if no matching roster entry exists", async () => {
         const db = makeTestDb();
         const c = mkCharacter(db, { name: "Ghost", realm: "Nowhere" });
