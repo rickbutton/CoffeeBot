@@ -1,0 +1,166 @@
+import { EventEmitter } from "node:events";
+import { ChannelType } from "discord.js";
+import { describe, expect, it, vi } from "vitest";
+import { makeTestDb } from "../../test-utils/db.js";
+import { registerDmHandler } from "./dm.js";
+
+const VALID_SIMC = `# header
+hunter="Bowzo"
+level=80
+race=blood_elf
+region=us
+server=area-52
+spec=beast_mastery
+`;
+
+function makeMsg(opts: {
+    content: string;
+    channelType?: ChannelType;
+    bot?: boolean;
+    attachments?: unknown[];
+    onReply?: (content: string) => void;
+}) {
+    return {
+        content: opts.content,
+        channel: { type: opts.channelType ?? ChannelType.DM },
+        author: {
+            id: "u1",
+            bot: opts.bot ?? false,
+            createDM: vi.fn(async () => ({})),
+        },
+        attachments: { values: () => (opts.attachments ?? []).values() },
+        reply: vi.fn(async ({ content }: { content: string }) => {
+            opts.onReply?.(content);
+        }),
+    };
+}
+
+async function flush(): Promise<void> {
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+}
+
+describe("registerDmHandler", () => {
+    it("ignores bot authors and non-DM channels", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        const trigger = vi.fn();
+        registerDmHandler(client, db, trigger);
+
+        const botMsg = makeMsg({ content: VALID_SIMC, bot: true });
+        (client as unknown as EventEmitter).emit("messageCreate", botMsg);
+
+        const guildMsg = makeMsg({ content: VALID_SIMC, channelType: ChannelType.GuildText });
+        (client as unknown as EventEmitter).emit("messageCreate", guildMsg);
+
+        await flush();
+        expect(botMsg.reply).not.toHaveBeenCalled();
+        expect(guildMsg.reply).not.toHaveBeenCalled();
+        expect(trigger).not.toHaveBeenCalled();
+    });
+
+    it("does not reply when message is empty with no attachments", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        registerDmHandler(client, db, () => {});
+        const msg = makeMsg({ content: "" });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(msg.reply).not.toHaveBeenCalled();
+    });
+
+    it("stores a valid simc and triggers status update", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        const trigger = vi.fn();
+        registerDmHandler(client, db, trigger);
+        let reply = "";
+        const msg = makeMsg({ content: VALID_SIMC, onReply: (c) => (reply = c) });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(reply).toMatch(/Stored/);
+        expect(trigger).toHaveBeenCalled();
+    });
+
+    it("replies with parse-error for malformed simc", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        registerDmHandler(client, db, () => {});
+        let reply = "";
+        const broken =
+            `hunter="Bowzo"\nregion=us\nspec=beast_mastery\n` + "x".repeat(40);
+        const msg = makeMsg({ content: broken, onReply: (c) => (reply = c) });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(reply).toMatch(/Couldn't parse/);
+    });
+
+    it("replies with missing-spec when spec line is absent", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        registerDmHandler(client, db, () => {});
+        let reply = "";
+        const noSpec = `hunter="Bowzo"\nlevel=80\nregion=us\nserver=area-52\n`;
+        const msg = makeMsg({ content: noSpec, onReply: (c) => (reply = c) });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(reply).toMatch(/no `spec=` line/);
+    });
+
+    it("replies with store-error when DB fails", async () => {
+        const db = makeTestDb();
+        const repo = await import("../../db/repo.js");
+        const spy = vi.spyOn(repo, "upsertCharacter").mockImplementation(() => {
+            throw new Error("db dead");
+        });
+        try {
+            const client = new EventEmitter() as never;
+            registerDmHandler(client, db, () => {});
+            let reply = "";
+            const msg = makeMsg({ content: VALID_SIMC, onReply: (c) => (reply = c) });
+            (client as unknown as EventEmitter).emit("messageCreate", msg);
+            await flush();
+            expect(reply).toMatch(/Something broke/);
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it("logs and swallows when handler throws (e.g. createDM throws)", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        registerDmHandler(client, db, () => {});
+        const msg = {
+            content: VALID_SIMC,
+            channel: { type: ChannelType.DM },
+            author: {
+                id: "u1",
+                bot: false,
+                createDM: vi.fn(() => {
+                    throw new Error("createDM threw synchronously");
+                }),
+            },
+            attachments: { values: () => [].values() },
+            reply: vi.fn(async () => {
+                throw new Error("reply failed");
+            }),
+        };
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        // No throw escapes the handler — that's the assertion.
+    });
+
+    it("replies with not-simc for content that doesn't look like simc", async () => {
+        const db = makeTestDb();
+        const client = new EventEmitter() as never;
+        registerDmHandler(client, db, () => {});
+        let reply = "";
+        const msg = makeMsg({
+            content: "# just a header\nrandom prose that's plenty long enough to pass the length check easily here",
+            onReply: (c) => (reply = c),
+        });
+        (client as unknown as EventEmitter).emit("messageCreate", msg);
+        await flush();
+        expect(reply).toMatch(/SimulationCraft/);
+    });
+});
