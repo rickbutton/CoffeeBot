@@ -8,7 +8,7 @@ import {
     type TextChannel,
 } from "discord.js";
 import type { Db } from "../../db/client.js";
-import { clearStatusChannel, renderStatusEmbed, setStatusChannel } from "../status-message.js";
+import { clearStatusChannel, renderStatusPages, setStatusChannel } from "../status-message.js";
 
 const EPHEMERAL = MessageFlags.Ephemeral;
 
@@ -81,12 +81,19 @@ export async function handleStatusCommand(
         }
 
         await interaction.deferReply({ flags: EPHEMERAL });
-        const posted = await tc.send({ embeds: [renderStatusEmbed(db, staleDays)] });
-        setStatusChannel(db, tc.id, posted.id);
+        const embeds = renderStatusPages(db, staleDays);
+        const ids: string[] = [];
+        let firstUrl = "";
+        for (const e of embeds) {
+            const m = await tc.send({ embeds: [e] });
+            ids.push(m.id);
+            if (!firstUrl) firstUrl = m.url;
+        }
+        setStatusChannel(db, tc.id, ids);
         await interaction.editReply({
             content:
                 `:white_check_mark: <#${tc.id}> is now the droptimizer status channel. ` +
-                `I'll keep [this message](${posted.url}) in sync as the roster changes, ` +
+                `I'll keep [this message](${firstUrl}) in sync as the roster changes, ` +
                 `and players can paste their simcs here.`,
             allowedMentions: { parse: [] },
         });

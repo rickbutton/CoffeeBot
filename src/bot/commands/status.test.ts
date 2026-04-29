@@ -1,7 +1,7 @@
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import { makeTestDb } from "../../test-utils/db.js";
-import { getStatusChannelId, setStatusChannel } from "../status-message.js";
+import { getStatusChannelId, getStatusMessageIds, setStatusChannel } from "../status-message.js";
 import { handleStatusCommand } from "./status.js";
 import { asyncMock } from "../../test-utils/factories.js";
 
@@ -89,6 +89,7 @@ describe("handleStatusCommand: auth + setup", () => {
         await handleStatusCommand(i as never, db, new Set(["admin"]), 7);
         expect(ch.send).toHaveBeenCalled();
         expect(getStatusChannelId(db)).toBe("chan1");
+        expect(getStatusMessageIds(db)).toEqual(["msg1"]);
         expect(i.editReply).toHaveBeenCalled();
     });
 });
@@ -96,10 +97,11 @@ describe("handleStatusCommand: auth + setup", () => {
 describe("handleStatusCommand: clear", () => {
     it("clears stored channel id", async () => {
         const db = makeTestDb();
-        setStatusChannel(db, "chan1", "msg");
+        setStatusChannel(db, "chan1", ["msg"]);
         const i = makeInteraction({ sub: "clear" });
         await handleStatusCommand(i as never, db, new Set(["admin"]), 7);
         expect(getStatusChannelId(db)).toBe(null);
+        expect(getStatusMessageIds(db)).toEqual([]);
         const r = i.reply.mock.calls[0]![0] as { content: string };
         expect(r.content).toMatch(/Forgot/);
     });
